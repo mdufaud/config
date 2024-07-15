@@ -1,0 +1,66 @@
+[user]
+  name = mdufaud
+  mail = maxence_dufaud@hotmail.fr
+
+[pull]
+  rebase = true
+
+[alias]
+  a = add -A
+  s = status
+  c = commit -m
+  p = push
+  cp = cherry-pick
+
+  # removes last commit
+  undo = reset HEAD~
+
+  # rename branch
+  rename = branch -m
+  rename-origin = !"f() { git branch -m $1 $2 && git push origin -m $2 && git push origin --delete $1; } ; f"
+
+  # checkout
+  co = checkout
+  new = checkout -b
+
+  # stash
+  stl = stash list
+
+  # colored log
+  logcolor = log --color=always
+  # list all commits in one line - scrollable
+  la = !"git logcolor --decorate --date=short --pretty=format:'%C(yellow)%h %C(green)%ad%C(red)%d %C(reset)%s %C(blue)[%cn]%C(reset)'"
+  # print last 20 commits in one line
+  l = !"git la -20 | cat && echo"
+  # print last 20 commits graph
+  ll = !"git logcolor -20 --oneline --graph --format='%C(auto)%h%d %s %C(black)%C(green)%cr %C(blue)[%cn]%C(reset)'| cat"
+  # print last 10 commits graph detailed
+  ls = !"git logcolor -10 --graph --stat | cat"
+  # print last commit details
+  last = !"git logcolor -1 HEAD --stat | cat"
+  # print all commits details from origin
+  bl = !"git logcolor origin/HEAD..HEAD --stat | cat"
+
+  # list branches sorted by last modified
+  b = !"git for-each-ref --sort='-authordate' --format='%(authordate)%09%(objectname)%09%(refname)' refs/heads | sed -e 's-refs/heads/--'"
+  br = !"git branch | cat"
+  bra = !"git branch -a | cat"
+
+  # diff
+  d = diff
+  ds = diff --staged
+  dc = diff --cached
+
+  # diff word
+  dw = diff --color-words
+  dws = diff --staged --color-words
+  dwc = diff --cached --color-words
+
+  # diff bat
+  bat = !'git diff --name-only --relative --diff-filter=d | xargs bat --diff'
+
+  # diff tool
+  dv = difftool -t vimdiff -y
+
+  # grep
+  grep = grep -Ii

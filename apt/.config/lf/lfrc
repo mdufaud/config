@@ -1,0 +1,7 @@
+cmd open $vim $fx
+
+map <enter> open
+map <esc> quit
+map . set hidden!
+
+set previewer ~/.config/lf/pv.sh
