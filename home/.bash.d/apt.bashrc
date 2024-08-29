@@ -2,6 +2,13 @@
 # Git
 #
 
+if bin_exists git; then
+  # check if include path has ~/.gitalias - if not add it
+  if ! git config --get-all include.path | grep '~/.gitalias' 1>/dev/null 2>/dev/null; then
+    git config --global --add include.path '~/.gitalias'
+  fi
+fi
+
 alias gita="git add -A"
 alias gitc="git commit -m"
 alias gits="git status"
@@ -9,6 +16,7 @@ alias git_rebase_from_head="git rebase -i HEAD~"
 alias git_rebase_abort="git rebase --abort"
 alias git_rebase_continue="git rebase --continue"
 alias git_amend="git commit --amend"
+alias git_conf="git config --list --show-origin --show-scope"
 
 alias is_git_repo="git rev-parse --is-inside-work-tree 2>&- 1>&-"
 
