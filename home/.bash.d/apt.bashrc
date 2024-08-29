@@ -1,5 +1,3 @@
-#!/bin/bash
-
 #
 # Git
 #
@@ -17,20 +15,18 @@ alias is_git_repo="git rev-parse --is-inside-work-tree 2>&- 1>&-"
 function git_select()
 (
     local __git_log_output
-    if __git_log_output=$(git log --oneline --graph --color=always --format='%C(auto)%h%d %s %C(black)%C(bold)%cr %Cblue[%cn]%Creset'); then
-        gum filter --placeholder 'Filter...' --indicator=">" < <(echo "$__git_log_output") | cut -d' ' -f1 # | copy
+    if __git_log_output=$(git log --oneline --color=always --format='%C(auto)%H%d %s %C(black)%C(bold)%cr %Cblue[%cn]%Creset'); then
+        gum filter --placeholder 'Filter...' --indicator=">" < <(echo "$__git_log_output") | cut -d' ' -f1  | clip_copy
     fi
 )
 alias gitsel="git_select"
 
 function git_diff()
 {
-  git log --graph --color=always \
-      --format='%C(auto)%h%d %s %C(black)%C(bold)%cr %Cblue[%cn]%Creset' "$@" |
+  git log --graph --color=always --format='%C(auto)%h%d %s %C(black)%C(bold)%cr %Cblue[%cn]%Creset' "$@" |
   fzf --ansi --no-sort --reverse --tiebreak=index --bind=ctrl-s:toggle-sort \
-      --bind "ctrl-m:execute:
-                (grep -o '[a-f0-9]\{7\}' | head -1 |
-                xargs -I % sh -c 'git show --color=always % | less -R') << 'FZF-EOF'
+      --preview "(echo {} | grep -o '[a-f0-9]\{7\}' | head -1 | xargs -I % sh -c 'git show --color=always %')" \
+      --bind "ctrl-m:execute: (grep -o '[a-f0-9]\{7\}' | head -1 | xargs -I % sh -c 'git show --color=always % | less -R') << 'FZF-EOF'
                 {}
 FZF-EOF"
 }
@@ -61,7 +57,17 @@ vcpkg_baseline()
 # Python venv
 #
 
-alias venv="source .venv/bin/activate"
+venv()
+{
+  local venv_path=".venv"
+  local venv_activate="$venv_path/bin/activate"
+
+  if [[ ! -f $venv_activate ]]; then
+    python -m venv $venv_path
+  fi
+
+  source $venv_activate
+}
 
 #
 # RabbitMQ
@@ -134,14 +140,52 @@ _install_bat()
     ln -s /usr/bin/batcat ~/.local/bin/bat
 }
 
-batfollow()
+bat_follow()
 {
     tail -f "$1" | bat --paging=never -l log
 }
+alias batf="bat_follow"
 
 if bin_exists bat; then
     export MANPAGER="sh -c 'col -b | bat -l man -p'"
 fi
+
+#
+# Valgrind
+#
+
+alias valgrind_leak="valgrind --leak-check=yes"
+alias vleak="valgrind_leak"
+
+cachegrind() (
+  valgrind --tool=cachegrind $1 &
+  local pid=$!
+  trap "kill -SIGINT $pid" INT
+  wait
+
+  sleep 0.5
+  local cachegrind_file_path="cachegrind.out.$pid"
+  cg_annotate $cachegrind_file_path
+
+  if [ -f $cachegrind_file_path ] && ask_confirm "Delete cachegrind file ?"; then
+    rm $cachegrind_file_path
+  fi
+)
+
+callgrind() (
+  valgrind --tool=callgrind $1 &
+  local pid=$!
+  trap "kill -SIGINT $pid" INT
+  wait
+
+  sleep 0.5
+  local callgrind_file_path="callgrind.out.$pid"
+  callgrind_annotate --threshold=98 --context=3 $callgrind_file_path
+
+  if [ -f $callgrind_file_path ] && ask_confirm "Delete callgrind file ?"; then
+    rm $callgrind_file_path
+  fi
+)
 
 #
 # Fzf
@@ -149,8 +193,9 @@ fi
 
 _install_fzf()
 {
-    local fzf_path="$HOME/apt/fzf"
+    # fzf
 
+    local fzf_path="$HOME/apt/fzf"
     mkdir -p $(dirname $fzf_path)
 
     if [ -e $fzf_path ]; then
@@ -160,8 +205,20 @@ _install_fzf()
     fi
 
     $fzf_path/install
-
     eval "$(fzf --bash)"
+
+    # fzf-git
+
+    local fzf_git_path="$HOME/apt/fzf-git"
+    mkdir -p $(dirname $fzf_git_path)
+
+    if [ -e $fzf_git_path ]; then
+        git -C $fzf_git_path pull
+    else
+        git clone --depth 1 https://github.com/junegunn/fzf-git.sh $fzf_git_path
+    fi
+
+    . $fzf_git_path/fzf-git.sh
 }
 
 if [[ ! "$PATH" == *$HOME/apt/fzf/bin* ]]; then
@@ -170,6 +227,15 @@ fi
 
 if bin_exists fzf; then
     eval "$(fzf --bash)"
+fi
+
+if [[ -f $HOME/apt/fzf-git/fzf-git.sh ]]; then
+  # the script actually exit because it takes an argument which does not exists
+  __tmp_sourcing() {
+    . $HOME/apt/fzf-git/fzf-git.sh
+  }
+  __tmp_sourcing
+  unset __tmp_sourcing
 fi
 
 #
@@ -210,6 +276,7 @@ _install_rg()
 }
 
 if bin_exists rg; then
-    export FZF_DEFAULT_COMMAND="rg --files --hidden -g '!.git'"
-    export FZF_CTRL_T_COMMAND="rg --files --hidden -g '!.git'"
+    export FZF_DEFAULT_COMMAND="rg --files --hidden -g '!debugfs' -g '!.git'"
+    export FZF_CTRL_T_COMMAND="rg --files --hidden -g '!debugfs' -g '!.git'"
 fi
+

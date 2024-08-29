@@ -1,16 +1,10 @@
-[user]
-  name = mdufaud
-  mail = maxence_dufaud@hotmail.fr
-
-[pull]
-  rebase = true
-
 [alias]
   a = add -A
-  s = status
-  c = commit -m
+	s = status
+	c = commit -m
   p = push
   cp = cherry-pick
+  pushf = !git push -u origin $(git rev-parse --abbrev-ref HEAD)
 
   # removes last commit
   undo = reset HEAD~
@@ -29,11 +23,11 @@
   # colored log
   logcolor = log --color=always
   # list all commits in one line - scrollable
-  la = !"git logcolor --decorate --date=short --pretty=format:'%C(yellow)%h %C(green)%ad%C(red)%d %C(reset)%s %C(blue)[%cn]%C(reset)'"
+  la = !"git logcolor --decorate --date=short --pretty=format:'%C(yellow)%H %C(green)%ad%C(red)%d %C(reset)%s %C(blue)[%cn]%C(reset)'"
   # print last 20 commits in one line
   l = !"git la -20 | cat && echo"
   # print last 20 commits graph
-  ll = !"git logcolor -20 --oneline --graph --format='%C(auto)%h%d %s %C(black)%C(green)%cr %C(blue)[%cn]%C(reset)'| cat"
+  lg = !"git logcolor -20 --oneline --graph --format='%C(auto)%h%d %s %C(black)%C(green)%cr %C(blue)[%cn]%C(reset)'| cat"
   # print last 10 commits graph detailed
   ls = !"git logcolor -10 --graph --stat | cat"
   # print last commit details
@@ -45,6 +39,8 @@
   b = !"git for-each-ref --sort='-authordate' --format='%(authordate)%09%(objectname)%09%(refname)' refs/heads | sed -e 's-refs/heads/--'"
   br = !"git branch | cat"
   bra = !"git branch -a | cat"
+  # print name of current branch
+  be = !"echo $(git rev-parse --abbrev-ref HEAD)"
 
   # diff
   d = diff
@@ -57,7 +53,7 @@
   dwc = diff --cached --color-words
 
   # diff bat
-  bat = !'git diff --name-only --relative --diff-filter=d | xargs bat --diff'
+  bat = !"git diff --name-only --relative --diff-filter=d | xargs bat --diff"
 
   # diff tool
   dv = difftool -t vimdiff -y

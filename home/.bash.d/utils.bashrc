@@ -1,21 +1,21 @@
-#!/bin/bash
-
 #
 # Utils
 #
 
-alias search="grep -Hri --exclude-dir=.git --exclude-dir=build"
-alias valgrind_leak="valgrind --leak-check=yes"
-alias vleak="valgrind_leak"
+alias search="grep -Hr --exclude-dir=.git --exclude-dir=build --exclude-dir=.vcpkg"
+alias searchi="search -i"
 # use keychron keyboards Fkeys
 alias keychron_fkeys_on="echo 0 | sudo tee /sys/module/hid_apple/parameters/fnmode"
 alias keychron_fkeys_off="echo 1 | sudo tee /sys/module/hid_apple/parameters/fnmode"
-# generate a random strong password
-alias passwd_gen="strings /dev/urandom | grep -o '[[:alnum:]]' | head -n 30 | tr -d '\n'; echo"
 # copy with a progress bar
 alias cpv='rsync -ah --info=progress2'
 alias nowtime='date +"%T"'
 alias nowdate='date +"%d-%m-%Y"'
+
+# generate a random strong password
+function passwd_gen() {
+  strings /dev/urandom | grep -o '[[:alnum:]]' | head -n ${1:-30} | tr -d '\n'; echo
+}
 
 function hist_execute()
 {
@@ -61,7 +61,6 @@ open_explorer()
     xdg-open $1
   fi
 }
-
 
 #
 # Filesystem
@@ -109,6 +108,16 @@ alias sdiff="diff_side"
 # no common lines
 alias diff_no_common="diff_text --suppress-common-lines"
 alias ldiff="diff_no_common"
+
+findf()
+{
+  find ${2:-.} -maxdepth 20 -type f -name "*$1*"
+}
+
+findd()
+{
+  find ${2:-.} -maxdepth 20 -type d -name "*$1*"
+}
 
 file_contained_in()
 {

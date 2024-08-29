@@ -1,12 +1,9 @@
-#!/bin/bash
-
 #
 # Core
 #
 
 alias bash_reload='source $HOME/.bashrc'
 alias sh_reload='bash_reload'
-alias shreload='bash_reload'
 
 function bash_export()
 {

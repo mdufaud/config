@@ -20,35 +20,6 @@ function _install_lf() {
 
   if [ ! -x "$(command -v lf)" ]; then
       env CGO_ENABLED=0 go install -ldflags="-s -w" github.com/gokcehan/lf@latest
-
-      mkdir -p $HOME/.config/lf
-      cat << EOF > $HOME/.config/lf/lfrc
-cmd open \$vim \$fx
-
-map <enter> open
-map <esc> quit
-map . set hidden!
-
-set previewer ~/.config/lf/pv.sh
-EOF
-
-    cat << EOF > $HOME/.config/lf/pv.sh
-#!/bin/bash
-
-previewer="cat"
-if command -v batcat; then
-    unset COLORTERM
-    previewer="batcat --color always"
-fi
-
-case "\$1" in
-    *.tar*) tar tf "\$1";;
-    *.zip*) unzip -l "\$1";;
-    *) \$previewer "\$@";;
-esac
-EOF
-
-    chmod +x $HOME/.config/lf/pv.sh
   else
     print_err "LF already installed"
   fi

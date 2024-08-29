@@ -1,13 +1,12 @@
 #!/bin/bash
 
-previewer="cat"
-if command -v batcat; then
-    unset COLORTERM
-    previewer="batcat --color always"
-fi
+unset COLORTERM
 
 case "$1" in
     *.tar*) tar tf "$1";;
-    *.zip*) unzip -l "$1";;
-    *) $previewer "$@";;
+    *.zip) unzip -l "$1";;
+    # *.rar) unrar l "$1";;
+    # *.7z) 7z l "$1";;
+    # *.pdf) pdftotext "$1" -;;
+    *) /usr/bin/batcat --color always "$@" ;;
 esac

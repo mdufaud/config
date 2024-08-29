@@ -1,7 +1,79 @@
+set ignorecase true
+set mouse true
+set previewer ~/.config/lf/pv.sh
+
 cmd open $vim $fx
 
 map <enter> open
 map <esc> quit
+
+map <c-w> $$SHELL
+map <c-q> quit
+map <c-b> clear
+map <c-u> :unselect;clear
+map <c-c> copy
+map <c-f> search
+map <c-n> search-next
+
+map <f-2> rename
+map <f-5> reload
+
+map <c-k> ${{
+#Copy fullpath
+echo -n "$fx" | clip.exe
+}}
+
 map . set hidden!
 
-set previewer ~/.config/lf/pv.sh
+map a :find; cmd-insert a;
+map b :find; cmd-insert b;
+map c :find; cmd-insert c;
+map d :find; cmd-insert d;
+map e :find; cmd-insert e;
+map f :find; cmd-insert f;
+map g :find; cmd-insert g;
+map h :find; cmd-insert h;
+map i :find; cmd-insert i;
+map j :find; cmd-insert j;
+map k :find; cmd-insert k;
+map l :find; cmd-insert l;
+map m :find; cmd-insert m;
+map n :find; cmd-insert n;
+map o :find; cmd-insert o;
+map p :find; cmd-insert p;
+map q :find; cmd-insert q;
+map r :find; cmd-insert r;
+map s :find; cmd-insert s;
+map t :find; cmd-insert t;
+map u :find; cmd-insert u;
+map v :find; cmd-insert v;
+map w :find; cmd-insert w;
+map x :find; cmd-insert x;
+map y :find; cmd-insert y;
+map z :find; cmd-insert z;
+map A :find; cmd-insert A;
+map B :find; cmd-insert B;
+map C :find; cmd-insert C;
+map D :find; cmd-insert D;
+map E :find; cmd-insert E;
+map F :find; cmd-insert F;
+map G :find; cmd-insert G;
+map H :find; cmd-insert H;
+map I :find; cmd-insert I;
+map J :find; cmd-insert J;
+map K :find; cmd-insert K;
+map L :find; cmd-insert L;
+map M :find; cmd-insert M;
+map N :find; cmd-insert N;
+map O :find; cmd-insert O;
+map P :find; cmd-insert P;
+map Q :find; cmd-insert Q;
+map R :find; cmd-insert R;
+map S :find; cmd-insert S;
+map T :find; cmd-insert T;
+map U :find; cmd-insert U;
+map V :find; cmd-insert V;
+map W :find; cmd-insert W;
+map X :find; cmd-insert X;
+map Y :find; cmd-insert Y;
+map Z :find; cmd-insert Z;
