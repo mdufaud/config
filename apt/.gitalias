@@ -1,13 +1,27 @@
+# Destroyed a commit by accident ?
+# git reflog
+# git checkout -b someNewBranchName shaYouDestroyed
+# You have 90 days
+
 [alias]
   a = add -A
 	s = status
 	c = commit -m
   p = push
   cp = cherry-pick
-  pushf = !git push -u origin $(git rev-parse --abbrev-ref HEAD)
 
-  # removes last commit
-  undo = reset HEAD~
+  # first push
+  pushf = !"git push -u origin $(git rev-parse --abbrev-ref HEAD)"
+
+  # list files not used by this git
+  others = "ls-files --others --ignored --exclude-from=.gitignore"
+
+  # removes last commit - ready to commit again
+  uncommit = "reset --soft HEAD~1"
+  # removes last commit - need to add again before commit
+  undo = "reset HEAD~1"
+  # delete all changes
+  discard = !"f() { ask_confirm 'Are you sure you want to delete all your changes ?' && git reset --hard HEAD~1 || echo "aborted"; } ; f"
 
   # rename branch
   rename = branch -m
@@ -21,42 +35,56 @@
   stl = stash list
 
   # colored log
-  logcolor = log --color=always
+  log-color = log --color=always
   # list all commits in one line - scrollable
-  la = !"git logcolor --decorate --date=short --pretty=format:'%C(yellow)%H %C(green)%ad%C(red)%d %C(reset)%s %C(blue)[%cn]%C(reset)'"
+  la = !"git log-color --decorate --date=short --pretty=format:'%C(yellow)%H %C(green)%ad%C(red)%d %C(reset)%s %C(blue)[%cn]%C(reset)'"
+  list-all = la
   # print last 20 commits in one line
   l = !"git la -20 | cat && echo"
+  list = l
   # print last 20 commits graph
-  lg = !"git logcolor -20 --oneline --graph --format='%C(auto)%h%d %s %C(black)%C(green)%cr %C(blue)[%cn]%C(reset)'| cat"
+  lg = !"git log-color -20 --oneline --graph --format='%C(auto)%h%d %s %C(black)%C(green)%cr %C(blue)[%cn]%C(reset)'| cat"
+  list-graph = lg
   # print last 10 commits graph detailed
-  ls = !"git logcolor -10 --graph --stat | cat"
+  ls = !"git log-color -10 --graph --stat | cat"
   # print last commit details
-  last = !"git logcolor -1 HEAD --stat | cat"
+  last = !"git log-color -1 HEAD --stat | cat"
   # print all commits details from origin
-  bl = !"git logcolor origin/HEAD..HEAD --stat | cat"
+  lo = !"git log-color origin/HEAD..HEAD --stat | cat"
+  list-from-origin = lo
 
+  # print name of current branch
+  bp = !"echo $(git rev-parse --abbrev-ref HEAD)"
   # list branches sorted by last modified
   b = !"git for-each-ref --sort='-authordate' --format='%(authordate)%09%(objectname)%09%(refname)' refs/heads | sed -e 's-refs/heads/--'"
   br = !"git branch | cat"
   bra = !"git branch -a | cat"
-  # print name of current branch
-  be = !"echo $(git rev-parse --abbrev-ref HEAD)"
 
   # diff
   d = diff
   ds = diff --staged
+  diff-staged = ds
   dc = diff --cached
+  diff-cached = dc
 
   # diff word
   dw = diff --color-words
+  diff-word = dw
   dws = diff --staged --color-words
+  diff-word-staged = dws
   dwc = diff --cached --color-words
+  diff-word-cached = dwc
 
-  # diff bat
-  bat = !"git diff --name-only --relative --diff-filter=d | xargs bat --diff"
+  # diff last commit
+  dl = !"git show | bat -l patch"
+  diff-last = dl
+  # diff now
+  dn = !"git diff HEAD | bat -l patch"
+  diff-now = dn
 
   # diff tool
   dv = difftool -t vimdiff -y
+  diff-view = dv
 
   # grep
   grep = grep -Ii
