@@ -20,8 +20,6 @@
   uncommit = "reset --soft HEAD~1"
   # removes last commit - need to add again before commit
   undo = "reset HEAD~1"
-  # delete all changes
-  discard = !"f() { ask_confirm 'Are you sure you want to delete all your changes ?' && git reset --hard HEAD~1 || echo "aborted"; } ; f"
 
   # rename branch
   rename = branch -m

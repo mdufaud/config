@@ -40,6 +40,13 @@ FZF-EOF"
 }
 alias gitdiff="git_diff"
 
+function git_discard()
+{
+  ask_confirm 'Are you sure you want to delete your last commit and all your changes ?' \
+    && git reset --hard HEAD~1 \
+    || echo "aborted"
+}
+
 #
 # VCPKG
 #
