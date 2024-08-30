@@ -38,12 +38,102 @@ ps_grep()
 }
 
 #
+# OS
+#
+
+__check_os_id()
+(
+  if [ ! -r "/etc/os-release" ]; then
+    return 1
+  fi
+  source /etc/os-release
+  [ "$ID" == "$1" ];
+)
+
+is_ubuntu()
+{
+  __check_os_id "ubuntu"
+}
+
+is_debian()
+{
+  __check_os_id "debian"
+}
+
+is_archlinux()
+{
+  __check_os_id "arch"
+}
+
+is_termux()
+{
+  bin_exists termux-setup-storage
+}
+
+is_osx()
+{
+  [[ "$(uname)" == 'Darwin' ]];
+}
+
+is_wsl()
+{
+  [ -f /proc/version ] && [[ $(grep -i Microsoft /proc/version) ]];
+}
+
+get_triplet()
+{
+  local triplet=$(make -v | grep 'Built for' | awk '{print $3}')
+
+  echo $triplet | sed "s/android/gnu/g"
+}
+
+is_intel()
+{
+  [ "$(uname -m)" == "x86_64" ];
+}
+
+is_amd()
+{
+  [ "$(uname -m)" == "amd64" ];
+}
+
+is_arm()
+{
+  case $(uname -m) in
+    aarch64) return 0;;
+    arm64) return 0;;
+    armv7) return 0;;
+    *) return 1;;
+  esac
+}
+
+#
 # Drive
 #
 
 alias disk_swap_clear="sudo swapoff -a && sudo swapon -a"
 alias mount_pretty="mount | column -t"
 alias pmount="mount_pretty"
+
+#
+# Syslog
+#
+
+function syslog_msg() {
+  _arg_assert_exists "$1" "usage: syslog_notice {debug,info,notice,warning,err,...} msg..." || return
+  _arg_assert_exists "$2" "usage: syslog_notice {debug,info,notice,warning,err,...} msg..." || return
+
+  local __facility="local0"
+  local __priority=$1
+  shift
+
+  logger -p "$__facility.$__priority" -t "BASH" "$@"
+}
+
+function syslog_tail() {
+  local __nb=${1:-10}
+  tail /var/log/syslog -n ${__nb}
+}
 
 #
 # Strace
@@ -173,24 +263,4 @@ strace_file()
   _arg_assert_exists "$1" "usage: strace_file {pid,cmd}" || return
                       # trace / signal / status / fds  / path / CMD or PID
   _strace_pid_or_cmd "%file"   'all'    'all'   'all'  'all'   "$@"
-}
-
-#
-# Syslog
-#
-
-function syslog_msg() {
-  _arg_assert_exists "$1" "usage: syslog_notice {debug,info,notice,warning,err,...} msg..." || return
-  _arg_assert_exists "$2" "usage: syslog_notice {debug,info,notice,warning,err,...} msg..." || return
-
-  local __facility="local0"
-  local __priority=$1
-  shift
-
-  logger -p "$__facility.$__priority" -t "BASH" "$@"
-}
-
-function syslog_tail() {
-  local __nb=${1:-10}
-  tail /var/log/syslog -n ${__nb}
 }

@@ -18,7 +18,7 @@ fi
 function _install_lf() {
   _arg_assert_binary go "golang is not installed" || return
 
-  if [ ! -x "$(command -v lf)" ]; then
+  if ! bin_exists lf; then
       env CGO_ENABLED=0 go install -ldflags="-s -w" github.com/gokcehan/lf@latest
   else
     print_err "LF already installed"
@@ -41,7 +41,7 @@ function _install_charm() {
   go install github.com/charmbracelet/gum@v0.13.0
 }
 
-if [ -x "$(command -v gum)" ]; then
+if bin_exists gum; then
   # export GUM_INPUT_CURSOR_FOREGROUND="#FF0"
   # export GUM_INPUT_PROMPT_FOREGROUND="#0FF"
   # export GUM_INPUT_PLACEHOLDER="Type something..."

@@ -1,3 +1,52 @@
+export APT_DIR="$HOME/apt"
+
+__prepare_local_install()
+{
+  mkdir -p $APT_DIR
+}
+
+__install_with_pkgmanager()
+{
+  if bin_exists pacman; then
+    sudo pacman -S $1
+  elif bin_exists pkg; then
+    sudo pkg install $1
+  elif bin_exists apt; then
+    sudo apt install $1
+  elif bin_exists apk; then
+    sudo apk add $1
+  elif bin_exists dnf; then
+    sudo dnf install $1
+  elif bin_exists brew; then
+    sudo brew install $1
+  fi
+}
+
+#
+# Cargo
+#
+
+__install_with_cargo()
+(
+   __prepare_local_install
+
+  local projname="$1"
+  local github_url="$2"
+  local tag_name="$3"
+
+  if [ -n $tag_name ]; then
+    tag_name="--branch $tag_name"
+  fi
+
+  git clone --depth 1 $tag_name $github_url $APT_DIR/$projname
+  cd $APT_DIR/$projname
+  cargo install --path .
+)
+
+if [[ ! "$PATH" == *$HOME/.cargo/bin* ]]; then
+  PATH="${PATH}:$HOME/.cargo/bin"
+fi
+
 #
 # Git
 #
@@ -22,10 +71,10 @@ alias is_git_repo="git rev-parse --is-inside-work-tree 2>&- 1>&-"
 
 function git_select()
 (
-    local __git_log_output
-    if __git_log_output=$(git log --oneline --color=always --format='%C(auto)%H%d %s %C(black)%C(bold)%cr %Cblue[%cn]%Creset'); then
-        gum filter --placeholder 'Filter...' --indicator=">" < <(echo "$__git_log_output") | cut -d' ' -f1  | clip_copy
-    fi
+  local __git_log_output
+  if __git_log_output=$(git log --oneline --color=always --format='%C(auto)%H%d %s %C(black)%C(bold)%cr %Cblue[%cn]%Creset'); then
+    gum filter --placeholder 'Filter...' --indicator=">" < <(echo "$__git_log_output") | cut -d' ' -f1  | clip_copy
+  fi
 )
 alias gitsel="git_select"
 
@@ -53,19 +102,19 @@ function git_discard()
 
 vcpkg_baseline()
 (
-    _arg_assert_exists "$1" "vcpkg_baseline <libname>" || return
+  _arg_assert_exists "$1" "vcpkg_baseline <libname>" || return
 
-    local __commit=${2:-HEAD}
+  local __commit=${2:-HEAD}
 
-    if dir_exists ".vcpkg"; then
-        cd .vcpkg
-    fi
+  if dir_exists ".vcpkg"; then
+    cd .vcpkg
+  fi
 
-    if ! file_exists "bootstrap-vcpkg.sh"; then
-        return 1
-    fi
+  if ! file_exists "bootstrap-vcpkg.sh"; then
+    return 1
+  fi
 
-    git show $__commit:versions/baseline.json | egrep -A 3 -e "$1"
+  git show $__commit:versions/baseline.json | egrep -A 3 -e "$1"
 )
 
 #
@@ -146,23 +195,23 @@ if [ -r "~/emscripten/emsdk/emsdk_env.sh" ]; then
 fi
 
 #
-# Bat
+# Bat (cli better cat)
 #
 
 _install_bat()
 {
-    sudo apt install bat
-    ln -s /usr/bin/batcat ~/.local/bin/bat
+  __install_with_pkgmanager bat
+  ln -s /usr/bin/batcat ~/.local/bin/bat
 }
 
 bat_follow()
 {
-    tail -f "$1" | bat --paging=never -l log
+  tail -f "$1" | bat --paging=never -l log
 }
 alias batf="bat_follow"
 
 if bin_exists bat; then
-    export MANPAGER="sh -c 'col -b | bat -l man -p'"
+  export MANPAGER="sh -c 'col -b | bat -l man -p'"
 fi
 
 #
@@ -203,51 +252,51 @@ callgrind() (
 )
 
 #
-# Fzf
+# Fzf (cli fuzzy finder)
 #
 
 _install_fzf()
 {
-    # fzf
+  __prepare_local_install
 
-    local fzf_path="$HOME/apt/fzf"
-    mkdir -p $(dirname $fzf_path)
+  # fzf
 
-    if [ -e $fzf_path ]; then
-        git -C $fzf_path pull
-    else
-        git clone --depth 1 https://github.com/junegunn/fzf.git $fzf_path
-    fi
+  local fzf_path="$APT_DIR/fzf"
 
-    $fzf_path/install
-    eval "$(fzf --bash)"
+  if [ -e $fzf_path ]; then
+    git -C $fzf_path pull
+  else
+    git clone --depth 1 https://github.com/junegunn/fzf.git $fzf_path
+  fi
 
-    # fzf-git
+  $fzf_path/install
+  eval "$(fzf --bash)"
 
-    local fzf_git_path="$HOME/apt/fzf-git"
-    mkdir -p $(dirname $fzf_git_path)
+  # fzf-git
 
-    if [ -e $fzf_git_path ]; then
-        git -C $fzf_git_path pull
-    else
-        git clone --depth 1 https://github.com/junegunn/fzf-git.sh $fzf_git_path
-    fi
+  local fzf_git_path="$APT_DIR/fzf-git"
 
-    . $fzf_git_path/fzf-git.sh
+  if [ -e $fzf_git_path ]; then
+    git -C $fzf_git_path pull
+  else
+    git clone --depth 1 https://github.com/junegunn/fzf-git.sh $fzf_git_path
+  fi
+
+  . $fzf_git_path/fzf-git.sh
 }
 
-if [[ ! "$PATH" == *$HOME/apt/fzf/bin* ]]; then
-    PATH="${PATH}:$HOME/apt/fzf/bin"
+if [[ ! "$PATH" == *$APT_DIR/fzf/bin* ]]; then
+  PATH="${PATH}:$APT_DIR/fzf/bin"
 fi
 
 if bin_exists fzf; then
-    eval "$(fzf --bash)"
+  eval "$(fzf --bash)"
 fi
 
-if [[ -f $HOME/apt/fzf-git/fzf-git.sh ]]; then
+if [[ -f $APT_DIR/fzf-git/fzf-git.sh ]]; then
   # the script actually exit because it takes an argument which does not exists
   __tmp_sourcing() {
-    . $HOME/apt/fzf-git/fzf-git.sh
+    . $APT_DIR/fzf-git/fzf-git.sh
   }
   __tmp_sourcing
   unset __tmp_sourcing
@@ -259,35 +308,35 @@ fi
 
 _install_nvim()
 {
-    local _nvim_ver=${1:-v0.10.0}
+  local _nvim_ver=${1:-v0.10.0}
 
-    echo "Installing neovim version $_nvim_ver"
+  echo "Installing neovim version $_nvim_ver"
 
-    curl https://github.com/neovim/neovim/releases/download/$_nvim_ver/nvim.appimage --output $HOME/.local/bin
-    chmod +x $HOME/.local/bin/nvim.appimage
-    mv $HOME/.local/bin/nvim.appimage $HOME/.local/bin/nvim
+  curl https://github.com/neovim/neovim/releases/download/$_nvim_ver/nvim.appimage --output $HOME/.local/bin
+  chmod +x $HOME/.local/bin/nvim.appimage
+  mv $HOME/.local/bin/nvim.appimage $HOME/.local/bin/nvim
 
-    mkdir -p $HOME/.config/nvim
-    curl https://raw.githubusercontent.com/nvim-lua/kickstart.nvim/master/init.lua --output $HOME/.config/nvim/init.lua
+  mkdir -p $HOME/.config/nvim
+  curl https://raw.githubusercontent.com/nvim-lua/kickstart.nvim/master/init.lua --output $HOME/.config/nvim/init.lua
 
-    echo "Use :Mason to install code servers"
+  echo "Use :Mason to install code servers"
 }
 
 #
-# Rg
+# Rg (cli ripgrep better grep)
 #
 
 _install_rg()
 {
-    if bin_exists apt; then
-        (
-            cd /tmp && \
-            curl -LO https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep_14.1.0-1_amd64.deb && \
-            sudo dpkg -i /tmp/ripgrep_14.1.0-1_amd64.deb
-        )
-    elif bin_exists pacman; then
-        sudo pacman -S ripgrep
-    fi
+  if is_ubuntu; then
+    (
+      cd /tmp && \
+      curl -LO https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep_14.1.0-1_amd64.deb && \
+      sudo dpkg -i /tmp/ripgrep_14.1.0-1_amd64.deb
+    )
+  else
+    __install_with_pkgmanager ripgrep
+  fi
 }
 
 if bin_exists rg; then
@@ -295,3 +344,158 @@ if bin_exists rg; then
     export FZF_CTRL_T_COMMAND="rg --files --hidden -g '!debugfs' -g '!.git'"
 fi
 
+#
+# Neofetch (OS and hardware data)
+#
+
+_install_neofetch()
+(
+  __install_with_cargo neofetch https://github.com/dylanaraps/neofetch.git 7.1.0
+)
+
+#
+# Figlet (cli text to ascii)
+#
+
+_install_figlet()
+{
+  __install_with_pkgmanager figlet
+  # Fonts:
+  # $> ls /usr/share/figlet/ | grep flf
+}
+
+#
+# Lolcat (cli gradiant colored text)
+#
+
+_install_lolcat()
+{
+  __install_with_pkgmanager lolcat
+}
+
+#
+# Asciinema (record and play terminal sessions)
+#
+
+_install_asciinema()
+{
+  __install_with_pkgmanager asciinema
+}
+
+#
+# GdbInit
+#
+
+_install_gdb_init()
+{
+  if [ -f ~/.gdbinit ]; then
+    mv ~/.gdbinit ~/.gdbinit.old
+  fi
+  wget -P ~ https://github.com/cyrus-and/gdb-dashboard/raw/master/.gdbinit
+  # get coloration:
+  # pip install pygments
+}
+
+#
+# Dog (DNS tool)
+#
+
+_install_dog()
+(
+  __install_with_cargo dog https://github.com/ogham/dog.git
+)
+
+#
+# Tre (better tree)
+#
+
+_install_tre()
+(
+  __install_with_cargo tre https://github.com/dduan/tre.git v0.4.0
+)
+
+#
+# Bandwhich (check network usage)
+#
+
+_install_bandwhich()
+{
+  __install_with_cargo bandwhich https://github.com/imsnif/bandwhich.git v0.23.0
+  sudo setcap cap_sys_ptrace,cap_dac_read_search,cap_net_raw,cap_net_admin+ep $(command -v bandwhich)
+}
+
+#
+# Hyperfine (Benchmarker)
+#
+
+_install_hyperfine()
+{
+  if is_ubuntu; then
+    (
+      cd /tmp && \
+      curl -LO https://github.com/sharkdp/hyperfine/releases/download/v1.16.1/hyperfine_1.16.1_amd64.deb && \
+      sudo dpkg -i /tmp/hyperfine_1.16.1_amd64.deb
+    )
+  else
+    __install_with_pkgmanager hyperfine
+  fi
+}
+
+#
+# Exiftool (better file - get info or metadata on files)
+#
+
+_install_exiftool()
+(
+  __prepare_local_install
+
+  git clone --depth 1 --branch 12.94 https://github.com/exiftool/exiftool.git $APT_DIR/exiftool
+  $APT_DIR/exiftool
+  perl Makefile.PL
+  make
+  make install
+)
+
+#
+# Duf (better df)
+#
+
+_install_duf()
+{
+  __install_with_pkgmanager duf
+}
+
+#
+# Eza (better ls)
+#
+
+_install_eza()
+{
+  __install_with_pkgmanager eza 1>/dev/null 2>/dev/null
+
+  if [ $? -ne 0 ]; then
+    __install_with_cargo eza https://github.com/eza-community/eza.git v0.19.1
+  fi
+}
+
+alias bls="eza --long --tree --level 4 --total-size --binary --header --group --icons=always"
+alias blsa="bls -A"
+
+#
+# Nerdfonts
+#
+
+_install_nerdfonts()
+(
+  if is_wsl; then
+    xdg-open https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/CascadiaMono.zip
+    local windows_current_username=$(powershell.exe '$env:UserName' | tr -d '\r' | tr -d '\n')
+    open_explorer /mnt/c/Users/$windows_current_username/Downloads
+  else
+    mkdir -p ~/.local/share/fonts
+    cd ~/.local/share/fonts
+    wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/CascadiaMono.zip
+    unzip CascadiaMono.zip
+    fc-cache -fv
+  fi
+)

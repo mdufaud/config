@@ -10,6 +10,12 @@
   p = push
   cp = cherry-pick
 
+  # describe alias
+  type = !"f() { git config --list | grep alias | grep $1; } ; f"
+
+  # clone one tag
+  clone-tag = !"f() { git clone --depth 1 --branch $2 $1 ; }; f"
+
   # first push
   pushf = !"git push -u origin $(git rev-parse --abbrev-ref HEAD)"
 

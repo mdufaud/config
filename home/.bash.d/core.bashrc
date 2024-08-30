@@ -53,10 +53,6 @@ is_shell_login() { shopt -q login_shell; }
 is_shell_vscode() { [[ "$TERM_PROGRAM" == "vscode" ]]; }
 is_shell_piped() { [ ! -t 1 ]; }
 
-is_linux() { [[ "$(uname)" == 'Linux' ]]; }
-is_osx() { [[ "$(uname)" == 'Darwin' ]]; }
-is_wsl() { [[ $(grep -i Microsoft /proc/version) ]]; }
-
 is_empty() { [ -z "$1" ]; }
 file_exists() { [ -f "$1" ]; }
 file_not_empty() { [ -s "$1" ]; }
