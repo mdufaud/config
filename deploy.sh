@@ -18,16 +18,17 @@ _replace_file()
     return 2
   fi
 
-  # copy only if there is a difference
-  local diff="$(diff --color=always $path_from $path_to)"
+  local diffstr
+  diffstr=$(diff --color=always $path_from $path_to)
   local ret=$?
+  # copy only if there is a difference
   if [ $ret -ne 0 ]; then
     # list differences
     echo "Difference for file $path_from:"
-    echo "$diff"
+    echo "$diffstr"
     echo
     # ask confirmation to replace file
-    if ask_confirm "Do you want to replace $path_to ?"; then
+    if ask_confirm "Do you want to replace $path_from ---> $path_to ?"; then
       echo "Copying $path_from ---> $path_to"
       if [ -z $DRY_RUN ]; then
         cp "$path_from" "$path_to"
