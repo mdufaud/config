@@ -6,10 +6,8 @@ if [ -d "$HOME/apt/go" ]; then
   PATH="$HOME/apt/go/bin:$PATH"
 fi
 
-if [ -x "$(command -v go)" ]; then
-  export GOPATH=$HOME/.go
-  PATH="$GOPATH/bin:$PATH"
-fi
+export GOPATH=$HOME/.go
+PATH="$GOPATH/bin:$PATH"
 
 #
 # Installers

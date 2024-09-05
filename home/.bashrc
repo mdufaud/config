@@ -193,27 +193,25 @@ export GROFF_NO_SGR=1
 #
 
 if [ -d $HOME/.bash.d ]; then
-
-load_script()
-{
-    local __path="$HOME/.bash.d/$1.bashrc"
-    if [ -r "$__path" ]; then
+  load_script()
+  {
+      local __path="$HOME/.bash.d/$1.bashrc"
+      if [ -r "$__path" ]; then
       . "$__path"
-    fi
-}
+      fi
+  }
 
-load_script core
-load_script utils
-load_script prompt
-load_script system
-load_script network
-load_script term
-load_script convert
-load_script apt
-load_script golang
+  load_script core
+  load_script utils
+  load_script prompt
+  load_script system
+  load_script network
+  load_script term
+  load_script convert
+  load_script apt
+  load_script golang
 
-unset load_script
-
+  unset load_script
 fi
 
 if [ -r $HOME/.bashrc_private ]; then

@@ -80,13 +80,6 @@ is_wsl()
   [ -f /proc/version ] && [[ $(grep -i Microsoft /proc/version) ]];
 }
 
-get_triplet()
-{
-  local triplet=$(make -v | grep 'Built for' | awk '{print $3}')
-
-  echo $triplet | sed "s/android/gnu/g"
-}
-
 is_intel()
 {
   [ "$(uname -m)" == "x86_64" ];
@@ -105,6 +98,18 @@ is_arm()
     armv7) return 0;;
     *) return 1;;
   esac
+}
+
+get_triplet()
+{
+  local triplet=$(make -v | grep 'Built for' | awk '{print $3}')
+
+  echo $triplet | sed "s/android/gnu/g"
+}
+
+get_windows_name()
+{
+  powershell.exe '$env:UserName' | tr -d '\r' | tr -d '\n'
 }
 
 #

@@ -1,24 +1,44 @@
 export APT_DIR="$HOME/apt"
 
+function install_list()
+(
+  set -e
+
+  if ! bin_exists fzf; then
+    _install_fzf
+  fi
+
+  local list="$(declare -F | grep _install_ | sed 's/declare -f //g')"
+  local selection="$(echo "$list" | fzf --multi --cycle)"
+
+  for cmd in ${selection}; do
+    echo "$cmd"
+    $cmd
+  done
+)
+
 __prepare_local_install()
 {
   mkdir -p $APT_DIR
 }
 
-__install_with_pkgmanager()
+__pkg_manager_install()
 {
+  local opt_sudo
+  if bin_exists sudo; then opt_sudo="sudo"; fi
+
   if bin_exists pacman; then
-    sudo pacman -S $1
+    $opt_sudo pacman -S $1
   elif bin_exists pkg; then
-    sudo pkg install $1
+    $opt_sudo pkg install $1
   elif bin_exists apt; then
-    sudo apt install $1
+    $opt_sudo apt install $1
   elif bin_exists apk; then
-    sudo apk add $1
+    $opt_sudo apk add $1
   elif bin_exists dnf; then
-    sudo dnf install $1
+    $opt_sudo dnf install $1
   elif bin_exists brew; then
-    sudo brew install $1
+    $opt_sudo brew install $1
   fi
 }
 
@@ -26,7 +46,7 @@ __install_with_pkgmanager()
 # Cargo
 #
 
-__install_with_cargo()
+__cargo_install()
 (
    __prepare_local_install
 
@@ -38,8 +58,17 @@ __install_with_cargo()
     tag_name="--branch $tag_name"
   fi
 
-  git clone --depth 1 $tag_name $github_url $APT_DIR/$projname
-  cd $APT_DIR/$projname
+  if [ ! -d $APT_DIR/$projname ]; then
+    git clone --depth 1 $tag_name $github_url $APT_DIR/$projname
+    cd $APT_DIR/$projname
+  else
+    cd $APT_DIR/$projname
+    if [ ! -z "$tagname" ]; then
+      git checkout $tag_name
+    fi
+    git pull
+  fi
+
   cargo install --path .
 )
 
@@ -468,10 +497,16 @@ fi
 #
 
 _install_bat()
-{
-  __install_with_pkgmanager bat
-  ln -s /usr/bin/batcat ~/.local/bin/bat
-}
+(
+  set -e
+
+  __pkg_manager_install bat
+
+  if bin_exists batcat; then
+    rm ~/.local/bin/bat
+    ln -s $(command -v batcat) ~/.local/bin/bat
+  fi
+)
 
 bat_follow()
 {
@@ -576,7 +611,8 @@ fi
 #
 
 _install_nvim()
-{
+(
+  set -e
   local _nvim_ver=${1:-v0.10.0}
 
   echo "Installing neovim version $_nvim_ver"
@@ -589,7 +625,7 @@ _install_nvim()
   curl https://raw.githubusercontent.com/nvim-lua/kickstart.nvim/master/init.lua --output $HOME/.config/nvim/init.lua
 
   echo "Use :Mason to install code servers"
-}
+)
 
 #
 # Rg (cli ripgrep better grep)
@@ -604,7 +640,7 @@ _install_rg()
       sudo dpkg -i /tmp/ripgrep_14.1.0-1_amd64.deb
     )
   else
-    __install_with_pkgmanager ripgrep
+    __pkg_manager_install ripgrep
   fi
 }
 
@@ -619,7 +655,21 @@ fi
 
 _install_neofetch()
 (
-  __install_with_cargo neofetch https://github.com/dylanaraps/neofetch.git 7.1.0
+  __prepare_local_install
+
+  if [ -d $APT_DIR/neofetch ]; then
+    cd $APT_DIR/neofetch
+    git checkout 7.1.0
+    git pull
+  else
+    git clone --depth 1 --branch 7.1.0 https://github.com/dylanaraps/neofetch.git $APT_DIR/neofetch
+    cd $APT_DIR/neofetch
+  fi
+
+  local opt_sudo
+  if bin_exists sudo; then opt_sudo="sudo"; fi
+
+  $opt_sudo make install
 )
 
 #
@@ -628,7 +678,7 @@ _install_neofetch()
 
 _install_figlet()
 {
-  __install_with_pkgmanager figlet
+  __pkg_manager_install figlet
   # Fonts:
   # $> ls /usr/share/figlet/ | grep flf
 }
@@ -639,7 +689,7 @@ _install_figlet()
 
 _install_lolcat()
 {
-  __install_with_pkgmanager lolcat
+  __pkg_manager_install lolcat
 }
 
 #
@@ -648,7 +698,7 @@ _install_lolcat()
 
 _install_asciinema()
 {
-  __install_with_pkgmanager asciinema
+  __pkg_manager_install asciinema
 }
 
 #
@@ -671,7 +721,7 @@ _install_gdb_init()
 
 _install_dog()
 (
-  __install_with_cargo dog https://github.com/ogham/dog.git
+  __cargo_install dog https://github.com/ogham/dog.git
 )
 
 #
@@ -680,7 +730,7 @@ _install_dog()
 
 _install_tre()
 (
-  __install_with_cargo tre https://github.com/dduan/tre.git v0.4.0
+  __cargo_install tre https://github.com/dduan/tre.git v0.4.0
 )
 
 #
@@ -689,7 +739,7 @@ _install_tre()
 
 _install_bandwhich()
 {
-  __install_with_cargo bandwhich https://github.com/imsnif/bandwhich.git v0.23.0
+  __cargo_install bandwhich https://github.com/imsnif/bandwhich.git v0.23.0
   sudo setcap cap_sys_ptrace,cap_dac_read_search,cap_net_raw,cap_net_admin+ep $(command -v bandwhich)
 }
 
@@ -706,7 +756,7 @@ _install_hyperfine()
       sudo dpkg -i /tmp/hyperfine_1.16.1_amd64.deb
     )
   else
-    __install_with_pkgmanager hyperfine
+    __pkg_manager_install hyperfine
   fi
 }
 
@@ -716,13 +766,20 @@ _install_hyperfine()
 
 _install_exiftool()
 (
+  set -e
   __prepare_local_install
 
-  git clone --depth 1 --branch 12.94 https://github.com/exiftool/exiftool.git $APT_DIR/exiftool
-  $APT_DIR/exiftool
+  if [ ! -d "$APT_DIR/exiftool" ]; then
+    git clone --depth 1 --branch 12.94 https://github.com/exiftool/exiftool.git $APT_DIR/exiftool
+  fi
+  cd $APT_DIR/exiftool
   perl Makefile.PL
   make
-  make install
+
+  local opt_sudo
+  if bin_exists sudo; then opt_sudo="sudo"; fi
+
+  $opt_sudo make install
 )
 
 #
@@ -731,7 +788,11 @@ _install_exiftool()
 
 _install_duf()
 {
-  __install_with_pkgmanager duf
+  __pkg_manager_install duf 1>/dev/null 2>/dev/null
+
+  if [ $? -ne 0 ]; then
+    go install github.com/muesli/duf@latest
+  fi
 }
 
 #
@@ -740,10 +801,10 @@ _install_duf()
 
 _install_eza()
 {
-  __install_with_pkgmanager eza 1>/dev/null 2>/dev/null
+  __pkg_manager_install eza 1>/dev/null 2>/dev/null
 
   if [ $? -ne 0 ]; then
-    __install_with_cargo eza https://github.com/eza-community/eza.git v0.19.1
+    __cargo_install eza https://github.com/eza-community/eza.git v0.19.1
   fi
 }
 
@@ -757,14 +818,26 @@ alias blsa="bls -A"
 _install_nerdfonts()
 (
   if is_wsl; then
-    xdg-open https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/CascadiaMono.zip
-    local windows_current_username=$(powershell.exe '$env:UserName' | tr -d '\r' | tr -d '\n')
-    open_explorer /mnt/c/Users/$windows_current_username/Downloads
+    mkdir -p /tmp/nerdfont
+    cd /tmp/nerdfont
+    wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/CascadiaMono.zip
+    unzip CascadiaMono.zip
+    open_explorer .
   else
     mkdir -p ~/.local/share/fonts
     cd ~/.local/share/fonts
     wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/CascadiaMono.zip
     unzip CascadiaMono.zip
     fc-cache -fv
+    rm CascadiaMono.zip
   fi
 )
+
+#
+# ncdu (ncurses du)
+#
+
+_install_ncdu()
+{
+    __pkg_manager_install ncdu
+}
