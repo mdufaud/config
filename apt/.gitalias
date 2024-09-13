@@ -5,8 +5,8 @@
 
 [alias]
   a = add -A
-	s = status
-	c = commit -m
+  s = status
+  c = commit -m
   p = push
   cp = cherry-pick
 
@@ -16,8 +16,12 @@
   # clone one tag
   clone-tag = !"f() { git clone --depth 1 --branch $2 $1 ; }; f"
 
+  # clone recursive submodules
+  clone-rec = "clone --recurse-submodule"
+
   # first push
-  pushf = !"git push -u origin $(git rev-parse --abbrev-ref HEAD)"
+  push-first = !"git push -u origin $(git rev-parse --abbrev-ref HEAD)"
+  pushf = push-first
 
   # list files not used by this git
   others = "ls-files --others --ignored --exclude-from=.gitignore"
@@ -35,8 +39,16 @@
   co = checkout
   new = checkout -b
 
-  # stash
-  stl = stash list
+  # stash list
+  stl = !"git stash list | cat"
+  # stash diff
+  std = !"f() { git stash show stash@{${1:-0}} --patch; } ; f"
+  # stash commit
+  stc = "stash store -m"
+  # stash apply
+  st-apply = !"f() { git stash apply stash@{${1:-0}}; } ; f"
+  # stash push / git pull / stash pop
+  stp = !"git stash ; git pull ; git stash pop"
 
   # colored log
   log-color = log --color=always
