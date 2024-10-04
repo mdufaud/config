@@ -22,19 +22,12 @@ is_pid_alive()
 {
   _arg_assert_number "$1" "usage: is_pid_alive <pid>" || return
 
-  ps -p $1 >/dev/null
+  ps -p $1 >/dev/null 2>&1
 }
 
 duh()
 {
   du -h "$@" | sort -h
-}
-
-ps_grep()
-{
-  _arg_assert_exists "$1" "usage: ps_grep <process-name>" || return
-
-  ps aux | grep $1 | grep -v grep
 }
 
 #
@@ -80,6 +73,13 @@ is_wsl()
   [ -f /proc/version ] && [[ $(grep -i Microsoft /proc/version) ]];
 }
 
+os_get_triplet()
+{
+  local triplet=$(make -v | grep 'Built for' | awk '{print $3}')
+
+  echo $triplet | sed "s/android/gnu/g"
+}
+
 is_intel()
 {
   [ "$(uname -m)" == "x86_64" ];
@@ -113,12 +113,32 @@ get_windows_name()
 }
 
 #
+# CRT
+#
+
+os_install_crt()
+{
+  if [ -d "/etc/ca-certificates/trust-source/anchors" ]; then
+    if ! sudo trust anchor --store "$1"; then
+      sudo cp "$1" /etc/ca-certificates/trust-source/anchors
+      sudo update-ca-trust
+    fi
+  elif [ -d "/usr/local/share/ca-certificates/" ]; then
+    sudo cp "$1" /usr/local/share/ca-certificates/
+    sudo update-ca-certificates
+  else
+    return 1
+  fi
+}
+
+
+#
 # Drive
 #
 
 alias disk_swap_clear="sudo swapoff -a && sudo swapon -a"
 alias mount_pretty="mount | column -t"
-alias pmount="mount_pretty"
+alias mountp="mount_pretty"
 
 #
 # Syslog

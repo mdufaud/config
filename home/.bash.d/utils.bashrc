@@ -62,6 +62,16 @@ open_explorer()
   fi
 }
 
+from_hex()
+{
+  xxd --revert --plain
+}
+
+to_hex()
+{
+  xxd --plain
+}
+
 #
 # Filesystem
 #

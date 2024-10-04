@@ -122,7 +122,6 @@ _arg_assert_exists()
   return 0
 }
 
-
 _arg_assert_float()
 {
   if ! arg_exists $1 || ! arg_is_float $1; then

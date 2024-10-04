@@ -104,3 +104,7 @@
 
   # grep
   grep = grep -Ii
+
+  # skip
+  skip = update-index --skip-worktree
+  ignore = skip
