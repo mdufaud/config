@@ -41,7 +41,7 @@ update_into_from()
     return 2
   fi
 
-  if [ -d $path_from ]; then
+  if [ -d "$path_from" ]; then
     for file in $(ls -A $path_from); do
       local update_path="$path_from/$file"
       local to_update_path="$path_into/$file"
@@ -52,12 +52,12 @@ update_into_from()
         echo $update_path is not a file !
       fi
     done
-  elif [ -f $path_from ]; then
+  elif [ -f "$path_from" ]; then
     _do_copy "$path_from" "$path_into"
   fi
 }
 
-if [ ! -z $DRY_RUN ]; then
+if [ ! -z "$DRY_RUN" ]; then
   echo "Dry run activated"
 fi
 

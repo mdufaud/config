@@ -346,17 +346,17 @@ csv_merge()
 # csv_print file.csv ,
 csv_print()
 {
-  _arg_assert_exists "$1" "usage: csv_print <csv-file> <delimiter>" || return
-  _arg_assert_exists "$2" "usage: csv_print <csv-file> <delimiter>" || return
+  _arg_assert_exists "$1" "usage: <csv_print> <csv-file> <delimiter>" || return
+  _arg_assert_exists "$2" "usage: <csv_print> <csv-file> <delimiter>" || return
 
   cat $1 | column -t -s $2
 }
 
 csv_print_col()
 {
-  _arg_assert_exists "$1" "usage: csv_print_col <csv-file> <delimiter> <col_number>" || return
-  _arg_assert_exists "$2" "usage: csv_print_col <csv-file> <delimiter> <col_number>" || return
-  _arg_assert_number "$3" "usage: csv_print_col <csv-file> <delimiter> <col_number>" || return
+  _arg_assert_exists "$1" "usage: <csv_print_col> <csv-file> <delimiter> <col_number>" || return
+  _arg_assert_exists "$2" "usage: <csv_print_col> <csv-file> <delimiter> <col_number>" || return
+  _arg_assert_number "$3" "usage: <csv_print_col> <csv-file> <delimiter> <col_number>" || return
 
   cat $1 | awk -F "$2" "{print \$$3}"
 }

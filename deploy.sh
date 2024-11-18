@@ -64,7 +64,7 @@ replace_from_to()
   fi
 
   # if config is a directory
-  if [ -d $path_from ]; then
+  if [ -d "$path_from" ]; then
     for file in $(ls -A $path_from); do
       local replace_path="$path_from/$file"
       if [ -f $replace_path ]; then
@@ -74,12 +74,12 @@ replace_from_to()
       fi
     done
   # if config is a file
-  elif [ -f $path_from ]; then
+  elif [ -f "$path_from" ]; then
     _replace_file "$path_from" "$path_to"
   fi
 }
 
-if [ ! -z $DRY_RUN ]; then
+if [ ! -z "$DRY_RUN" ]; then
   echo "Dry run activated"
 fi
 

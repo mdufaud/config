@@ -169,7 +169,7 @@ _strace_pid_or_cmd()
     --trace-path=$__path\
     --status=$__status"
 
-  if [ ! -z "$__pid" ] && arg_is_number "$__pid"; then
+  if [ -n "$__pid" ] && arg_is_number "$__pid"; then
     # attach pid
     sudo $__cmd -p $__pid
   else

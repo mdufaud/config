@@ -5,11 +5,11 @@
 
 # Source global definitions
 if [ -f /etc/bashrc ]; then
-	 . /etc/bashrc
+  . /etc/bashrc
 fi
 
 if [ -f ~/.bash_aliases ]; then
-    . ~/.bash_aliases
+  . ~/.bash_aliases
 fi
 
 # enable programmable completion features (you don't need to enable
@@ -195,10 +195,10 @@ export GROFF_NO_SGR=1
 if [ -d $HOME/.bash.d ]; then
   load_script()
   {
-      local __path="$HOME/.bash.d/$1.bashrc"
-      if [ -r "$__path" ]; then
-      . "$__path"
-      fi
+    local __path="$HOME/.bash.d/$1.bashrc"
+    if [ -r "$__path" ]; then
+    . "$__path"
+    fi
   }
 
   load_script core
@@ -208,14 +208,16 @@ if [ -d $HOME/.bash.d ]; then
   load_script network
   load_script term
   load_script convert
+  load_script ssl
   load_script apt
   load_script golang
+  load_script cargo
 
   unset load_script
 fi
 
-if [ -r $HOME/.bashrc_private ]; then
-  . $HOME/.bashrc_private
+if [ -r $HOME/.private.bashrc ]; then
+  . $HOME/.private.bashrc
 fi
 
 export PATH

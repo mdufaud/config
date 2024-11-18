@@ -290,7 +290,7 @@ ip_infos()
   # local postal=$(echo $__resp | jq -r '.postal')
   # local timezone=$(echo $__resp | jq -r '.timezone')
 
-  bin_exists jq  && (echo $__resp | jq .) || echo $__resp
+  bin_exists jq && (echo $__resp | jq .) || echo $__resp
 }
 
 translate_from_to()
