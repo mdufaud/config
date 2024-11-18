@@ -1,0 +1,5 @@
+{
+    "clang-format.executable": "/home/mdufaud/.local/bin/clang-format",
+    "python.terminal.activateEnvironment": false,
+    "gitlens.telemetry.enabled": false
+}

@@ -1,0 +1,75 @@
+{
+    "terminal.integrated.scrollback": 15000,
+    "workbench.editorAssociations": {
+        "*.ipynb": "jupyter-notebook"
+    },
+    "notebook.cellToolbarLocation": {
+        "default": "right",
+        "jupyter-notebook": "left"
+    },
+    "git.suggestSmartCommit": false,
+    "git.mergeEditor": false,
+    "editor.suggestSelection": "first",
+    "editor.minimap.enabled": false,
+    "editor.cursorStyle": "line",
+    "editor.lineNumbers": "on",
+    "editor.wordSeparators": "/\\()\"':,.;<>~!@#$%^&*|+=[]{}`?-",
+    "editor.wordWrap": "off",
+    "editor.formatOnSave": true,
+    "[cpp]": {
+        "editor.defaultFormatter": "xaver.clang-format",
+        "editor.wordBasedSuggestions": "off",
+        "editor.suggest.insertMode": "replace",
+        "editor.semanticHighlighting.enabled": true
+    },
+    "[c]": {
+        "editor.defaultFormatter": "xaver.clang-format"
+    },
+    "[xml]": {
+        "editor.defaultFormatter": "xaver.clang-format"
+    },
+    "[python]": {
+        "editor.formatOnType": true
+    },
+    "python.languageServer": "Pylance",
+    "python.analysis.autoImportCompletions": false,
+    "gitlens.currentLine.enabled": false, // in modern version
+    "gitlens.codeLens.authors.enabled": false,
+    "gitlens.codeLens.recentChange.enabled": false,
+    "clang-format.language.c.enable": true,
+    "clang-format.language.cpp.enable": true,
+    "clang-format.language.cuda.enable": true,
+    "clang-format.language.cpp.style": "file",
+    "C_Cpp.intelliSenseEngine": "default",
+    "C_Cpp.files.exclude": {
+        "build/**": true,
+    },
+    "files.watcherExclude": {
+        "build/**": true,
+    },
+    "search.exclude": {
+        "build/**": true,
+    },
+    // "files.exclude": {
+    //     "build/**": true,
+    // },
+    "security.allowedUNCHosts": [
+        "wsl$"
+    ],
+    "remote.autoForwardPortsSource": "hybrid",
+    "terminal.integrated.gpuAcceleration": "off",
+    "workbench.iconTheme": "vscode-icons",
+    "vsicons.dontShowNewVersionMessage": true,
+    "telemetry.telemetryLevel": "off",
+    "gitlens.telemetry.enabled": false,
+    "git.openRepositoryInParentFolders": "never",
+    // "clangd.onConfigChanged": "restart",
+    // "clangd.arguments": [
+    //     "--header-insertion=never",
+    // ],
+    // "clang-tidy.buildPath": "./build",
+    // "clang-tidy.compilerArgs": [
+    //     "-std=c++17"
+    // ],
+    // "clangd.detectExtensionConflicts": false,
+}
