@@ -23,6 +23,11 @@
   push-first = !"git push -u origin $(git rev-parse --abbrev-ref HEAD)"
   pushf = push-first
 
+  pull-stash = !"git stash && git pull && git stash pop"
+  pullst = pull-stash
+  pull-master = !"git co master && git pull && git co -" 
+  pullmas = pull-master
+
   # list files not used by this git
   others = "ls-files --others --ignored --exclude-from=.gitignore"
 
@@ -82,6 +87,7 @@
   diff-staged = ds
   dc = diff --cached
   diff-cached = dc
+  dom = diff @ origin/master
 
   # diff word
   dw = diff --color-words

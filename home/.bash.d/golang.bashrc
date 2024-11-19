@@ -6,11 +6,17 @@ if [ -d "$HOME/apt/go" ]; then
   PATH="$HOME/apt/go/bin:$PATH"
 fi
 
-export GOPATH=$HOME/.go
-PATH="$GOPATH/bin:$PATH"
+if [ -x "$(command -v go)" ]; then
+  export GOPATH=$HOME/.go
+  PATH="$GOPATH/bin:$PATH"
+fi
 
 #
 # Installers
+#
+
+#
+# LF file explorer
 #
 
 function _install_lf() {
@@ -23,12 +29,20 @@ function _install_lf() {
   fi
 }
 
+#
+# qrcode_terminal
+#
+
 function _install_qrcode_terminal()
 {
   _arg_assert_binary go "golang is not installed" || return
 
   go install github.com/dawndiy/qrcode-terminal@latest
 }
+
+#
+# Charm (CLI suite)
+#
 
 function _install_charm() {
   _arg_assert_binary go "golang is not installed" || return
@@ -38,6 +52,18 @@ function _install_charm() {
   # cd $HOME/apt && wget https://golang.org/dl/go1.20.linux-amd64.tar.gz
   go install github.com/charmbracelet/gum@v0.13.0
 }
+
+#
+# YQ (yaml's jq)
+#
+
+_install_yq()
+{
+  _arg_assert_binary go "golang is not installed" || return
+
+  go install github.com/mikefarah/yq/v4@latest
+}
+
 
 if bin_exists gum; then
   # export GUM_INPUT_CURSOR_FOREGROUND="#FF0"

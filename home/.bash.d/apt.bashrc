@@ -91,6 +91,20 @@ function git_discard()
     || echo "aborted"
 }
 
+function git_debug()
+{
+  export GIT_TRACE_PACKET=1
+  export GIT_TRACE=1
+  export GIT_CURL_VERBOSE=1
+}
+
+function git_undebug()
+{
+  export GIT_TRACE_PACKET=
+  export GIT_TRACE=
+  export GIT_CURL_VERBOSE=
+}
+
 #
 # VCPKG
 #

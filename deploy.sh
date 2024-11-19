@@ -79,7 +79,7 @@ replace_from_to()
   fi
 }
 
-if [ ! -z "$DRY_RUN" ]; then
+if [ -n "$DRY_RUN" ]; then
   echo "Dry run activated"
 fi
 

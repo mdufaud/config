@@ -57,7 +57,7 @@ update_into_from()
   fi
 }
 
-if [ ! -z "$DRY_RUN" ]; then
+if [ -n "$DRY_RUN" ]; then
   echo "Dry run activated"
 fi
 

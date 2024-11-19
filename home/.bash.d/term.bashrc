@@ -59,14 +59,25 @@ BG_BOLD_WHITE="${ANSI_ESCAPE}[47;1m${ANSI_CLOSE}"
 
 # 256 colors
 
+print_red() { echo -e "${RED}${1}${ANSI_CLOSE}${ANSI_RESET}"; }
+print_green() { echo -e "${GREEN}${1}${ANSI_CLOSE}${ANSI_RESET}"; }
+print_blue() { echo -e "${BLUE}${1}${ANSI_CLOSE}${ANSI_RESET}"; }
+print_yellow() { echo -e "${YELLOW}${1}${ANSI_CLOSE}${ANSI_RESET}"; }
+
 ansi_color()
 {
-  echo -e "${ANSI_ESCAPE}[38;5;$1m${ANSI_CLOSE}"
+  if (( ${1} < 0 || ${1} > 255 )); then
+    return 1
+  fi
+  echo -en "${ANSI_ESCAPE}[38;5;${1}m${ANSI_CLOSE}"
 }
 
 ansi_bg()
 {
-  echo -e "${ANSI_ESCAPE}[48;5;$1m${ANSI_CLOSE}"
+  if (( ${1} < 0 || ${1} > 255 )); then
+    return 1
+  fi
+  echo -en "${ANSI_ESCAPE}[48;5;${1}m${ANSI_CLOSE}"
 }
 
 # Modifiers

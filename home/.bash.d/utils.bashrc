@@ -19,24 +19,40 @@ function passwd_gen() {
 
 function hist_execute()
 {
-  `gum filter --placeholder 'Select to execute...' --indicator=">" < $HISTFILE --height 40`
+  eval "$(tail -n 40 $HISTFILE | gum filter --placeholder 'Select to execute...' --indicator=">")"
 }
 
 function session_type()
 {
-  loginctl show-session $(loginctl | grep $(id -un) | awk '{print $1}') -p Type
+  loginctl show-session "$(loginctl | grep "$(id -un)" | awk '{print $1}')" -p Type
 }
 
 clip_copy()
 {
   if bin_exists xclip; then
-    xclip -i -selection clipboard
-  elif is_wsl ; then
-    clip.exe
+    if is_shell_piped; then
+      xclip -i -selection clipboard
+    else
+      echo "$1" | xclip -i -selection clipboard
+    fi
+  elif is_wsl; then
+    if is_shell_piped; then
+      clip.exe
+    else
+      echo "$1" | clip.exe
+    fi
   elif bin_exists pbcopy; then
-    pbcopy
+    if is_shell_piped; then
+      pbcopy
+    else
+      echo "$1" | pbcopy
+    fi
   elif [ -w "/dev/clipboard" ]; then
-    tee /dev/clipboard
+    if is_shell_piped; then
+      tee /dev/clipboard
+    else
+      echo "$1" > /dev/clipboard
+    fi
   fi
 }
 
@@ -44,7 +60,7 @@ clip_paste()
 {
   if bin_exists xclip; then
     xclip -selection clipboard -o
-  elif is_wsl ; then
+  elif is_wsl; then
     powershell.exe Get-Clipboard
   elif bin_exists pbpaste; then
     pbpaste
@@ -55,10 +71,16 @@ clip_paste()
 
 open_explorer()
 {
+  local path="${1:-.}"
+
   if is_wsl; then
-    (cd $1 && explorer.exe .)
+    if [ -d "${path}" ]; then
+      (cd "${path}" && explorer.exe .)
+      # explorer.exe always return false
+      true
+    fi
   elif bin_exists xdg-open; then
-    xdg-open $1
+    xdg-open "${path}"
   fi
 }
 
@@ -356,17 +378,17 @@ csv_merge()
 # csv_print file.csv ,
 csv_print()
 {
-  _arg_assert_exists "$1" "usage: <csv_print> <csv-file> <delimiter>" || return
-  _arg_assert_exists "$2" "usage: <csv_print> <csv-file> <delimiter>" || return
+  _arg_assert_exists "$1" "usage: csv_print <csv-file> <delimiter>" || return
+  _arg_assert_exists "$2" "usage: csv_print <csv-file> <delimiter>" || return
 
   cat $1 | column -t -s $2
 }
 
 csv_print_col()
 {
-  _arg_assert_exists "$1" "usage: <csv_print_col> <csv-file> <delimiter> <col_number>" || return
-  _arg_assert_exists "$2" "usage: <csv_print_col> <csv-file> <delimiter> <col_number>" || return
-  _arg_assert_number "$3" "usage: <csv_print_col> <csv-file> <delimiter> <col_number>" || return
+  _arg_assert_exists "$1" "usage: csv_print_col <csv-file> <delimiter> <col_number>" || return
+  _arg_assert_exists "$2" "usage: csv_print_col <csv-file> <delimiter> <col_number>" || return
+  _arg_assert_number "$3" "usage: csv_print_col <csv-file> <delimiter> <col_number>" || return
 
   cat $1 | awk -F "$2" "{print \$$3}"
 }

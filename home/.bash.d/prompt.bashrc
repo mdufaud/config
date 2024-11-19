@@ -14,12 +14,12 @@ esac
 
 if [ -n "$force_color_prompt" ]; then
   if [ -x "$(command -v tput)" ] && tput setaf 1 >&/dev/null; then
-    # We have color support; assume it's compliant with Ecma-48
-    # (ISO/IEC-6429). (Lack of such support is extremely rare, and such
-    # a case would tend to support setf rather than setaf.)
-    color_prompt=yes
+      # We have color support; assume it's compliant with Ecma-48
+      # (ISO/IEC-6429). (Lack of such support is extremely rare, and such
+      # a case would tend to support setf rather than setaf.)
+      color_prompt=yes
   else
-    color_prompt=
+	    color_prompt=
   fi
 fi
 
@@ -45,6 +45,11 @@ build_prompt()
     fi
   fi
 
+  local __bb_env=""
+  if [ -n "${BBPATH}" ]; then
+    __bb_env="(bb) "
+  fi
+
   if [ "$color_prompt" = yes ]; then
     # \[...\] tells bash that the enclosed characters won't take any space on the line
     local __cyan="\[${CYAN}\]"
@@ -54,9 +59,9 @@ build_prompt()
     local __emoji_cmd_ret="if [ \$? = 0 ]; then echo \"${EMOJI_CHECK}\"; else echo \"${EMOJI_CROSS}\"; fi"
 
     # {emote} {user}@{host}:{path}$
-    PS1="\`${__emoji_cmd_ret}\` ${__virtual_env}${__cyan}${__user}${__end_color}@${__green}${__host}${__end_color}:${__bold_yellow}${__path}${__end_color}\$ "
+    PS1="\`${__emoji_cmd_ret}\` ${__bb_env}${__virtual_env}${__cyan}${__user}${__end_color}@${__green}${__host}${__end_color}:${__bold_yellow}${__path}${__end_color}\$ "
   else
-    PS1="${__virtual_env}${__user}@${__host}:${__path}\$ "
+    PS1="${__bb_env}${__virtual_env}${__user}@${__host}:${__path}\$ "
   fi
 }
 
