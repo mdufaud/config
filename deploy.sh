@@ -19,7 +19,7 @@ _replace_file()
   fi
 
   local diffstr
-  diffstr=$(diff --color=always $path_from $path_to)
+  diffstr=$(diff --color=always $path_to $path_from)
   local ret=$?
   # copy only if there is a difference
   if [ $ret -ne 0 ]; then
