@@ -1,3 +1,28 @@
+" When started as "evim", evim.vim will already have done these settings.
+if v:progname =~? "evim"
+  finish
+endif
+
+" Bail out if something that ran earlier, e.g. a system wide vimrc, does not
+" want Vim to use these default values.
+if exists('skip_home_vim')
+  finish
+endif
+
+" Use Vim settings, rather than Vi settings (much better!).
+" This must be first, because it changes other options as a side effect.
+" Avoid side effects when it was already reset.
+if &compatible
+  set nocompatible
+endif
+
+" When the +eval feature is missing, the set command above will be skipped.
+" Use a trick to reset compatible only when the +eval feature is missing.
+silent! while 0
+  set nocompatible
+silent! endwhile
+
+
 " ==============================================================================
 " Vim Vundle
 " ==============================================================================
@@ -77,15 +102,95 @@ endif
 " Most basic
 "
 
-" Mouse usable
-set mouse=a
-" Colors
-syntax on
-" Line numbers
-set nu
-" Highlight searches
-set hlsearch
+" In many terminal emulators the mouse works just fine.  By enabling it you
+" can position the cursor, Visually select and scroll with the mouse.
+" Only xterm can grab the mouse events when using the shift key, for other
+" terminals use ":", select text and press Esc.
+if has('mouse')
+  if &term =~ 'xterm'
+    set mouse=a
+  else
+    set mouse=nvi
+  endif
+endif
+
+syntax on       " colors
+set nu          " line numbers
 let g:python_highlight_all = 1
+
+" Allow backspacing over everything in insert mode.
+set backspace=indent,eol,start
+
+set history=200		" keep 200 lines of command line history
+set ruler		    " show the cursor position all the time
+set showcmd		    " display incomplete commands
+
+set ttimeout		" time out for key codes
+set ttimeoutlen=100	" wait up to 100ms after Esc for special key
+
+" Show @@@ in the last line if it is truncated.
+set display=truncate
+
+" Show a few lines of context around the cursor.  Note that this makes the
+" text scroll if you mouse-click near the start or end of the window.
+set scrolloff=5
+
+" Do incremental searching when it's possible to timeout.
+if has('reltime')
+  set incsearch
+endif
+
+" Do not recognize octal numbers for Ctrl-A and Ctrl-X, most users find it
+" confusing.
+set nrformats-=octal
+
+" For Win32 GUI: remove 't' flag from 'guioptions': no tearoff menu entries.
+if has('win32')
+  set guioptions-=t
+endif
+
+"
+" Highlight
+"
+
+set hlsearch                " highlight searches
+let c_comment_strings=1     " highlight strings inside C comments
+set cursorline              " highlight current selected line
+
+" Convenient command to see the difference between the current buffer and the
+" file it was loaded from, thus the changes you made.
+" Only define it when not defined already.
+" Revert with: ":delcommand DiffOrig".
+if !exists(":DiffOrig")
+  command DiffOrig vert new | set bt=nofile | r ++edit # | 0d_ | diffthis
+		  \ | wincmd p | diffthis
+endif
+
+
+" Double click highlights stuff and no changing the current cursor
+nnoremap <silent> <2-LeftMouse> :let @/='\V\<'.escape(expand('<cword>'), '\').'\>'<cr>:set hls<cr>
+
+"
+" Better command completion
+"
+
+set wildmenu
+set wildmode=list:longest
+
+"
+" Indent
+"
+
+" Enable file type detection.
+" Use the default filetype settings, so that mail gets 'tw' set to 72,
+" 'cindent' is on in C files, etc.
+" Also load indent files, to automatically do language-dependent indenting.
+" Revert with ":filetype off".
+filetype plugin indent on
+
+" set smartindent
+" au! FileType python setl nosmartindent
+" set autoindent
 
 "
 " Tabs behavior
@@ -104,7 +209,7 @@ set guioptions-=T " Removes top toolbar
 set guioptions-=r " Removes right hand scroll bar
 set go-=L " Removes left hand scroll bar
 autocmd User Rails let b:surround_{char2nr('-')} = "<% \r %>" " displays <% %> correctly
-:set cpoptions+=$ " puts a $ marker for the end of words/lines in cw/c$ commands
+set cpoptions+=$ " puts a $ marker for the end of words/lines in cw/c$ commands
 hi MatchParen cterm=underline ctermbg=none ctermfg=none
 if has("multi_byte")
     if &termencoding == ""
@@ -116,19 +221,32 @@ if has("multi_byte")
     set fileencodings=ucs-bom,utf-8,latin1
 endif
 
-"
-" Behavior
-"
+" highlight Cursor guifg=white guibg=black
+" highlight iCursor guifg=white guibg=steelblue
+set guicursor=n-v-c:block-Cursor
+set guicursor+=i:ver100-iCursor
+set guicursor+=n-v-c:blinkon1
+set guicursor+=i:blinkwait10
 
-" Highlight > 80 char
-highlight OverLength ctermbg=red ctermfg=white guibg=#592929
-match OverLength /\%81v.\+/
 
 " Cursor
-" -> block visual
-au InsertEnter * silent execute "!echo -en \<esc>[5 q"
-" -> bar insert
-au InsertLeave * silent execute "!echo -en \<esc>[2 q"
+
+if &term =~ "xterm\\|rxvt"
+  " use an orange cursor in insert mode
+  " let &t_SI = "\<Esc>]12;orange\x7"
+  " use a red cursor otherwise
+  " let &t_EI = "\<Esc>]12;red\x7"
+
+  let &t_SI = "\e[5 q"   " cursor bar in insert mode
+  let &t_EI = "\e[2 q"   " cursor block in normal mode
+
+  silent !echo -ne "\033]12;red\007"
+  " reset cursor when vim starts
+  autocmd VimEnter * silent !echo -ne "\033]112\007"
+  " reset cursor when vim exits
+  autocmd VimLeave * silent !echo -ne "\033]112\007"
+  " use \003]12;gray\007 for gnome-terminal and rxvt up to version 9.21
+endif
 
 "
 " New commands
@@ -173,24 +291,6 @@ set guifont=Monospace\ 10
 "autocmd bufnewfile *.hpp exe "1," . 10 . "g/filename/s//" .expand("%")
 "autocmd bufnewfile *.py so ${HOME}/Templates/py_header.txt
 
-"
-" Better command completion
-"
-
-set wildmenu
-set wildmode=list:longest
-
-" Show current line
-
-set cursorline
-
-"
-" Indent
-"
-
-"set smartindent
-"au! FileType python setl nosmartindent
-"set autoindent
 
 " =============================================================================
 " Multicursor
