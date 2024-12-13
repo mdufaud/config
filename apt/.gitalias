@@ -16,6 +16,9 @@
   # clone one tag
   clone-tag = !"f() { git clone --depth 1 --branch $2 $1 ; }; f"
 
+  # clone last commit only
+  clone-d1 = "clone --depth 1"
+
   # clone recursive submodules
   clone-rec = "clone --recurse-submodule"
 

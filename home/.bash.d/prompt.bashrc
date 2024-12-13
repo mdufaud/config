@@ -31,6 +31,7 @@ EMOJI_CROSS=❌
 
 build_prompt()
 {
+  local __exit_code="$?"
   local __user="\u"
   local __host="\h"
   local __path="\w"
@@ -54,12 +55,20 @@ build_prompt()
     # \[...\] tells bash that the enclosed characters won't take any space on the line
     local __cyan="\[${CYAN}\]"
     local __green="\[${GREEN}\]"
+    local __red="\[${RED}\]"
     local __bold_yellow="\[${BOLD_YELLOW}\]"
     local __end_color="\[${ANSI_RESET}\]"
-    local __emoji_cmd_ret="if [ \$? = 0 ]; then echo \"${EMOJI_CHECK}\"; else echo \"${EMOJI_CROSS}\"; fi"
+
+    local __emoji_cmd_ret
+    if [ $__exit_code = 0 ]; then
+      __emoji_cmd_ret="${__green}"
+    else
+      __emoji_cmd_ret="${__red}"
+    fi
+    __emoji_cmd_ret="${__emoji_cmd_ret}$(printf '%-*s' 3 ${__exit_code})${__end_color}"
 
     # {emote} {user}@{host}:{path}$
-    PS1="\`${__emoji_cmd_ret}\` ${__bb_env}${__virtual_env}${__cyan}${__user}${__end_color}@${__green}${__host}${__end_color}:${__bold_yellow}${__path}${__end_color}\$ "
+    PS1="${__emoji_cmd_ret} ${__bb_env}${__virtual_env}${__cyan}${__user}${__end_color}@${__green}${__host}${__end_color}:${__bold_yellow}${__path}${__end_color}\$ "
   else
     PS1="${__bb_env}${__virtual_env}${__user}@${__host}:${__path}\$ "
   fi

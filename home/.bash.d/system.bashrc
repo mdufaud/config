@@ -73,6 +73,16 @@ is_wsl()
   [ -f /proc/version ] && [[ $(grep -i Microsoft /proc/version) ]];
 }
 
+is_x11()
+{
+  [[ "${XDG_SESSION_TYPE}" = "x11" ]];
+}
+
+is_wayland()
+{
+  [[ "${XDG_SESSION_TYPE}" = "wayland" ]];
+}
+
 os_get_triplet()
 {
   local triplet=$(make -v | grep 'Built for' | awk '{print $3}')
