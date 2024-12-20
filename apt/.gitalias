@@ -10,6 +10,9 @@
   p = push
   cp = cherry-pick
 
+  # get master/main branch name
+  main-branch = !"git branch -l main master --format '%(refname:short)' | head -n 1"
+
   # describe alias
   type = !"f() { git config --list | grep alias | grep $1; } ; f"
 
@@ -28,11 +31,13 @@
 
   pull-stash = !"git stash && git pull && git stash pop"
   pullst = pull-stash
-  pull-master = !"git co master && git pull && git co -" 
-  pullmas = pull-master
+  pull-main = !"git co $(git main-branch) && git pull && git co -" 
+  pullm = pull-main
 
   # list files not used by this git
   others = "ls-files --others --ignored --exclude-from=.gitignore"
+  # count lines
+  count-lines = !"git ls-files -z | xargs -0 wc -l"
 
   # removes last commit - ready to commit again
   uncommit = "reset --soft HEAD~1"
@@ -85,27 +90,28 @@
   bra = !"git branch -a | cat"
 
   # diff
-  d = diff
-  ds = diff --staged
+  d = !"f() { git diff $@ | if [ -x \"$(command -v bat)\" ]; then bat -l patch; else cat; fi; } ; f"
+  ds = !"git d --staged"
   diff-staged = ds
-  dc = diff --cached
+  dc = !"git d --cached"
   diff-cached = dc
-  dom = diff @ origin/master
+  dom = !"git d @ origin/$(git main-branch)"
 
   # diff word
-  dw = diff --color-words
+  dw = !"git d --color-words"
   diff-word = dw
-  dws = diff --staged --color-words
+  dws = !"git d --staged --color-words"
   diff-word-staged = dws
-  dwc = diff --cached --color-words
+  dwc = !"git d --cached --color-words"
   diff-word-cached = dwc
 
-  # diff last commit
-  dl = !"git show | bat -l patch"
-  diff-last = dl
   # diff now
-  dn = !"git diff HEAD | bat -l patch"
+  dn = !"git d HEAD"
   diff-now = dn
+
+  # diff last commit
+  dl = !"git show | if [ -x \"$(command -v bat)\" ]; then bat -l patch; else cat; fi;"
+  diff-last = dl
 
   # diff tool
   dv = difftool -t vimdiff -y
@@ -118,17 +124,29 @@
   skip = update-index --skip-worktree
   ignore = skip
 
-#
-# Delta
-#
+  # interactive scripts
 
-# [core]
-#     pager = delta
-# [interactive]
-#     diffFilter = delta --color-only
-# [delta]
-#     navigate = true  # use n and N to move between diff sections
-#     dark = true      # or light = true, or omit for auto-detection
-#     line-numbers = true
-# [merge]
-#     conflictstyle = zdiff3
+  diff-interactive = !"bash $HOME/.git.d/git-interactive-diff.sh"
+  di = diff-interactive
+
+  select-branch = !"git checkout \"$(bash $HOME/.git.d/git-interactive-select-branch.sh)\""
+  sb = select-branch
+
+  select-commit = !"git checkout \"$(bash $HOME/.git.d/git-interactive-select-commit.sh)\""
+  sc = select-commit
+
+  select-tag = !"git checkout \"$(bash $HOME/.git.d/git-interactive-select-tags.sh)\""
+  st = select-tag
+
+  # print help
+  h = !"printf 'List of bindings:\\n \
+    CTRL-G + F for Files\\n \
+    CTRL-G + B for Branches\\n \
+    CTRL-G + T for Tags\\n \
+    CTRL-G + R for Remotes\\n \
+    CTRL-G + H for commit Hashes\\n \
+    CTRL-G + S for Stashes\\n \
+    CTRL-G + L for reflogs\\n \
+    CTRL-G + W for Worktrees\\n \
+    CTRL-G + E for Each ref (git for-each-ref)\\n' \
+"
