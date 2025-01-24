@@ -61,7 +61,6 @@ alias git_rebase_abort="git rebase --abort"
 alias git_rebase_continue="git rebase --continue"
 alias git_amend="git commit --amend"
 alias git_conf="git config --list --show-origin --show-scope"
-
 alias is_git_repo="git rev-parse --is-inside-work-tree 2>&- 1>&-"
 
 function git_select()

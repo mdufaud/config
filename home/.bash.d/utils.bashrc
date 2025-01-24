@@ -30,25 +30,25 @@ function session_type()
 clip_copy()
 {
   if bin_exists xclip; then
-    if is_shell_piped; then
+    if is_shell_stdin_piped; then
       xclip -i -selection clipboard
     else
       echo "$1" | xclip -i -selection clipboard
     fi
   elif is_wsl; then
-    if is_shell_piped; then
+    if is_shell_stdin_piped; then
       clip.exe
     else
       echo "$1" | clip.exe
     fi
   elif bin_exists pbcopy; then
-    if is_shell_piped; then
+    if is_shell_stdin_piped; then
       pbcopy
     else
       echo "$1" | pbcopy
     fi
   elif [ -w "/dev/clipboard" ]; then
-    if is_shell_piped; then
+    if is_shell_stdin_piped; then
       tee /dev/clipboard
     else
       echo "$1" > /dev/clipboard

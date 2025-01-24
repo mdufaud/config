@@ -51,7 +51,8 @@ function bash_export_zip()
 is_shell_interactive() { [[ $- == *i* ]]; }
 is_shell_login() { shopt -q login_shell; }
 is_shell_vscode() { [[ "$TERM_PROGRAM" == "vscode" ]]; }
-is_shell_piped() { [ ! -t 1 ]; }
+is_shell_stdin_piped() { [ ! -t 0 ]; }
+is_shell_stdout_piped() { [ ! -t 1 ]; }
 
 is_empty() { [ -z "$1" ]; }
 file_exists() { [ -f "$1" ]; }
