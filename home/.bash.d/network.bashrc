@@ -304,7 +304,7 @@ function paste_rs() {
   local __file=${1:-/dev/stdin}
   local __url=$(curl --data-binary @${__file} https://paste.rs)
 
- if ! is_shell_piped && bin_exists qrcode-terminal; then
+ if ! is_shell_stdin_piped && bin_exists qrcode-terminal; then
     echo "$__url :"
     qrcode-terminal $__url
   else
