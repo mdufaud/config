@@ -27,9 +27,10 @@ ask_confirm()
 list_targets()
 {
   echo '('
+  echo "[home/.vimrc]=$HOME/.vimrc"
   echo "[home/.bashrc]=$HOME/.bashrc"
-  echo "[home/.bash.d]=$HOME/.bash.d"
   echo "[home/.LS_COLORS]=$HOME/.LS_COLORS"
+  echo "[home/.bash.d]=$HOME/.bash.d"
   echo "[apt/.config/lf]=$HOME/.config/lf"
   echo "[apt/.gitalias]=$HOME/.gitalias"
   echo "[apt/.git.d]=$HOME/.git.d"

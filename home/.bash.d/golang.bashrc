@@ -2,14 +2,23 @@
 # Golang
 #
 
-if [ -d "$HOME/apt/go" ]; then
-  PATH="$HOME/apt/go/bin:$PATH"
-fi
+__go_assert_installed()
+{
+  if ! bin_exists go; then
+    __pkg_manager_install golang && __go_setup
+  fi
+}
 
-if [ -x "$(command -v go)" ]; then
-  export GOPATH=$HOME/.go
-  PATH="$GOPATH/bin:$PATH"
-fi
+__go_setup()
+{
+  if bin_exists go; then
+    export GOPATH="$HOME/.go"
+    mkdir -p "$GOPATH"
+    export PATH="$GOPATH/bin:$PATH"
+  fi
+}
+
+__go_setup
 
 #
 # Installers
@@ -20,7 +29,7 @@ fi
 #
 
 function _install_lf() {
-  _arg_assert_binary go "golang is not installed" || return
+  __go_assert_installed
 
   if ! bin_exists lf; then
       env CGO_ENABLED=0 go install -ldflags="-s -w" github.com/gokcehan/lf@latest
@@ -35,7 +44,7 @@ function _install_lf() {
 
 function _install_qrcode_terminal()
 {
-  _arg_assert_binary go "golang is not installed" || return
+  __go_assert_installed
 
   go install github.com/dawndiy/qrcode-terminal@latest
 }
@@ -45,7 +54,7 @@ function _install_qrcode_terminal()
 #
 
 function _install_charm() {
-  _arg_assert_binary go "golang is not installed" || return
+  __go_assert_installed
 
   # Markdown reader
   go install github.com/charmbracelet/glow@v1.5.1
@@ -59,7 +68,7 @@ function _install_charm() {
 
 _install_yq()
 {
-  _arg_assert_binary go "golang is not installed" || return
+  __go_assert_installed
 
   go install github.com/mikefarah/yq/v4@latest
 }

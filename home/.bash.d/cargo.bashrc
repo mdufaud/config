@@ -2,9 +2,21 @@
 # Cargo
 #
 
+__cargo_assert_installed()
+{
+  if ! bin_exists cargo; then
+    __pkg_manager_install cargo
+  fi
+}
+
 __cargo_install()
 (
    __prepare_local_install
+   __cargo_assert_installed
+
+  if ! bin_exists cargo; then
+    __pkg_manager_install cargo
+  fi
 
   local projname="$1"
   local github_url="$2"
@@ -66,5 +78,8 @@ _install_bandwhich()
 
 _install_delta()
 {
+  if ! bin_exists cargo; then
+    __pkg_manager_install cargo
+  fi
   cargo install git-delta
 }

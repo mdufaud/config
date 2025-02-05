@@ -19,7 +19,7 @@ function install_list()
 
 __prepare_local_install()
 {
-  mkdir -p $APT_DIR
+  mkdir -p $APT_DIR/bin
 }
 
 __pkg_manager_install()
@@ -28,17 +28,17 @@ __pkg_manager_install()
   if bin_exists sudo; then opt_sudo="sudo"; fi
 
   if bin_exists pacman; then
-    $opt_sudo pacman -S $1
+    $opt_sudo pacman -S $@
   elif bin_exists pkg; then
-    $opt_sudo pkg install $1
+    $opt_sudo pkg install $@
   elif bin_exists apt; then
-    $opt_sudo apt install $1
+    $opt_sudo apt install $@
   elif bin_exists apk; then
-    $opt_sudo apk add $1
+    $opt_sudo apk add $@
   elif bin_exists dnf; then
-    $opt_sudo dnf install $1
+    $opt_sudo dnf install $@
   elif bin_exists brew; then
-    $opt_sudo brew install $1
+    $opt_sudo brew install $@
   fi
 }
 
@@ -213,7 +213,7 @@ _install_bat()
   __pkg_manager_install bat
 
   if bin_exists batcat; then
-    rm ~/.local/bin/bat
+    rm -f ~/.local/bin/bat
     ln -s $(command -v batcat) ~/.local/bin/bat
   fi
 )

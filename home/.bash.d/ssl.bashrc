@@ -312,7 +312,7 @@ ssl_gen_new()
   local days="${3:-3650}"
 
   ssl_gen_private "${name}.key" \
-    && ssl_get_public "${name}.key" > "${name}.pub" \
+    && ssl_get_public_from_private "${name}.key" > "${name}.pub" \
     && ssl_gen_cert "${name}.crt" "${name}.key" "$cn" "$days"
 }
 

@@ -138,6 +138,17 @@
   select-tag = !"git checkout \"$(bash $HOME/.git.d/git-interactive-select-tags.sh)\""
   st = select-tag
 
+  # check if commit1 is older than commit2
+  is-older-than = !"f() { \
+    if git merge-base --is-ancestor "$1" "$2" 2>/dev/null; then \
+      echo 'true'; return 0; \
+    elif git merge-base --is-ancestor "$2" "$1" 2>/dev/null; then \
+      echo 'false - it is more recent'; return 1; \
+    else \
+      echo 'none - the commits are not related'; return 2; \
+    fi; \
+  }; f"
+
   # print help
   h = !"printf 'List of bindings:\\n \
     CTRL-G + F for Files\\n \

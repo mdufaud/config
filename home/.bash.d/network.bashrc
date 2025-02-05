@@ -43,6 +43,18 @@ function is_mac_addr()
 
 function is_url()
 {
+  local regex='^[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$'
+  [[ $1 =~ $regex ]]
+}
+
+function is_http()
+{
+  local regex='^(https?|http?)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]$'
+  [[ $1 =~ $regex ]]
+}
+
+function is_uri()
+{
   local regex='^(https?|sftp)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]$'
   [[ $1 =~ $regex ]]
 }
@@ -375,4 +387,161 @@ qr_code()
   _arg_assert_exists "$1" "usage: qr_code <content>" || return
 
   echo $@ | curl -F-=\<- qrenco.de
+}
+
+udp_multi_srv()
+{
+  _arg_assert_exists "$1" "usage: udp_multi_srv <port>" || return
+
+  local proto_type="${2:-AF_INET}"
+  local srv_path
+  srv_path="$(mktemp)"
+
+  cat << EOF > "${srv_path}"
+import socket
+import sys
+
+def start_server(port):
+    with socket.socket(socket.${proto_type}, socket.SOCK_DGRAM) as server_socket:
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_socket.bind(('0.0.0.0', port))
+        print(f'Server listening on port {port}')
+
+        while True:
+            data, client_address = server_socket.recvfrom(4096)
+            print(f'Client {client_address}: {data.decode()}')
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python udp_server.py <port>")
+        sys.exit(1)
+
+    port = int(sys.argv[1])
+    start_server(port)
+EOF
+
+  python3 "${srv_path}" "$1"
+  rm -f "${srv_path}"
+}
+
+tcp_multi_srv()
+{
+  _arg_assert_exists "$1" "usage: tcp_multi_srv <port>" || return
+
+  local proto_type="${2:-AF_INET}"
+  local srv_path
+  srv_path="$(mktemp)"
+
+  cat << EOF > "${srv_path}"
+import socket
+import sys
+import threading
+
+client_threads = {}
+clients_to_remove = []
+
+def handle_client(client_socket, client_address):
+    with client_socket:
+        print(f'Connected by {client_address}')
+        while True:
+            data = client_socket.recv(4096)
+            if not data:
+                print(f'Client {client_address} disconnected')
+                clients_to_remove.append(client_socket)
+                break
+            print(f'Received message: {data.decode()}')
+
+def start_server(port):
+    with socket.socket(socket.${proto_type}, socket.SOCK_STREAM) as server_socket:
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_socket.bind(('0.0.0.0', port))
+        server_socket.listen(20)
+        print(f'Server listening on port {port}')
+
+        while True:
+            client_socket, client_address = server_socket.accept()
+            client_thread = threading.Thread(target=handle_client, args=(client_socket, client_address))
+            client_threads[client_socket] = client_thread
+            client_thread.start()
+            for to_remove_socket in clients_to_remove:
+                client_threads[to_remove_socket].join()
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python tcp_server.py <port>")
+        sys.exit(1)
+
+    port = int(sys.argv[1])
+    start_server(port)
+EOF
+
+  python3 "${srv_path}" "$1"
+  rm -f "${srv_path}"
+}
+
+tls_multi_srv()
+{
+  _arg_assert_exists "$1" "usage: tls_multi_srv <port> <certfile> <keyfile>" || return
+  _arg_assert_exists "$2" "usage: tls_multi_srv <port> <certfile> <keyfile>" || return
+  _arg_assert_exists "$3" "usage: tls_multi_srv <port> <certfile> <keyfile>" || return
+
+  local port="${1}"
+  local cert_file="${2}"
+  local key_file="${3}"
+  local proto_type="${4:-AF_INET}"
+  local srv_path
+  srv_path="$(mktemp)"
+
+  cat << EOF > "${srv_path}"
+import socket
+import sys
+import threading
+import ssl
+
+client_threads = {}
+clients_to_remove = []
+
+def handle_client(client_socket, client_address):
+    with client_socket:
+        print(f'Connected by {client_address}')
+        while True:
+            data = client_socket.recv(4096)
+            if not data:
+                print(f'Client {client_address} disconnected')
+                clients_to_remove.append(client_socket)
+                break
+            print(f'Received message: {data.decode()}')
+
+def start_server(port, certfile, keyfile):
+    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    context.load_cert_chain(certfile=certfile, keyfile=keyfile)
+
+    with socket.socket(socket.${proto_type}, socket.SOCK_STREAM) as server_socket:
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_socket.bind(('0.0.0.0', port))
+        server_socket.listen(20)
+        print(f'Server listening on port {port}')
+
+        while True:
+            client_socket, client_address = server_socket.accept()
+            tls_client_socket = context.wrap_socket(client_socket, server_side=True)
+            client_thread = threading.Thread(target=handle_client, args=(client_socket, client_address))
+            client_threads[client_socket] = client_thread
+            client_thread.start()
+            for to_remove_socket in clients_to_remove:
+                client_threads[to_remove_socket].join()
+
+if __name__ == "__main__":
+    if len(sys.argv) != 4:
+        print("Usage: python tls_server.py <port> <certfile> <keyfile>")
+        sys.exit(1)
+
+    port = int(sys.argv[1])
+    certfile = sys.argv[2]
+    keyfile = sys.argv[3]
+    start_server(port, certfile, keyfile)
+EOF
+
+  python3 "${srv_path}" "$port" "$cert_file" "$key_file"
+  rm -f "${srv_path}"
 }
