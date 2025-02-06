@@ -373,13 +373,18 @@ _install_nvim()
 
   echo "Installing neovim version $_nvim_ver"
 
-  mkdir -p ${APT_LOCAL_BIN_DIR}
-  curl https://github.com/neovim/neovim/releases/download/$_nvim_ver/nvim.appimage --output ${APT_LOCAL_BIN_DIR}/nvim.appimage
-  chmod +x ${APT_LOCAL_BIN_DIR}/nvim.appimage
+  curl -L https://github.com/neovim/neovim/releases/download/$_nvim_ver/nvim.appimage \
+    --output "${APT_LOCAL_BIN_DIR}/nvim.appimage" \
+    --fail-with-body
   mv ${APT_LOCAL_BIN_DIR}/nvim.appimage ${APT_LOCAL_BIN_DIR}/nvim
+  chmod +x ${APT_LOCAL_BIN_DIR}/nvim
 
   mkdir -p $HOME/.config/nvim
-  curl https://raw.githubusercontent.com/nvim-lua/kickstart.nvim/master/init.lua --output $HOME/.config/nvim/init.lua
+  curl -L https://raw.githubusercontent.com/nvim-lua/kickstart.nvim/master/init.lua \
+    --output $HOME/.config/nvim/init.lua \
+    --fail-with-body
+
+  __pkg_manager_install libfuse2
 
   echo "Use :Mason to install code servers"
 )
