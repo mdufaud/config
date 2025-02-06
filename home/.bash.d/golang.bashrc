@@ -3,18 +3,33 @@
 #
 
 __go_assert_installed()
-{
+(
   if ! bin_exists go; then
-    __pkg_manager_install golang && __go_setup
+    local go_version="1.20"
+    local go_tarname
+    local arch="$(uname -m)"
+    if [ "$arch" = "aarch64" ]; then
+      go_tarname="go${go_version}.linux-arm64.tar.gz"
+    else
+      go_tarname="go${go_version}.linux-amd64.tar.gz"
+    fi
+
+    mkdir -p $HOME/apt \
+      && cd $HOME/apt \
+      && wget "https://golang.org/dl/$go_tarname" \
+      && tar -C $HOME/apt -xzf "$go_tarname" \
+      && rm "$go_tarname"
+
+    __go_setup
   fi
-}
+)
 
 __go_setup()
 {
-  if bin_exists go; then
+  if [ -d "$HOME/apt/go" ]; then
     export GOPATH="$HOME/.go"
     mkdir -p "$GOPATH"
-    export PATH="$GOPATH/bin:$PATH"
+    export PATH="$HOME/apt/go/bin:$GOPATH/bin:$PATH"
   fi
 }
 
@@ -58,7 +73,6 @@ function _install_charm() {
 
   # Markdown reader
   go install github.com/charmbracelet/glow@v1.5.1
-  # cd $HOME/apt && wget https://golang.org/dl/go1.20.linux-amd64.tar.gz
   go install github.com/charmbracelet/gum@v0.13.0
 }
 

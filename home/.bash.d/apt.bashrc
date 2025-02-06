@@ -214,7 +214,7 @@ _install_bat()
 
   if bin_exists batcat; then
     rm -f ~/.local/bin/bat
-    ln -s $(command -v batcat) ~/.local/bin/bat
+    ln -s ~/.local/bin/bat $(command -v batcat)
   fi
 )
 
@@ -379,10 +379,12 @@ _install_nvim()
 _install_rg()
 {
   if is_ubuntu; then
+    local __rg_version="14.1.0"
+    local __rg_deb="ripgrep_${__rg_version}-1_$(uname -m).deb"
     (
       cd /tmp && \
-      curl -LO https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep_14.1.0-1_amd64.deb && \
-      sudo dpkg -i /tmp/ripgrep_14.1.0-1_amd64.deb
+        curl -LO "https://github.com/BurntSushi/ripgrep/releases/download/${__rg_version}/${__rg_deb}" && \
+        sudo dpkg -i "/tmp/${__rg_deb}"
     )
   else
     __pkg_manager_install ripgrep
