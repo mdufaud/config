@@ -369,11 +369,14 @@ _install_nvim()
   set -e
   __prepare_local_install
 
-  local _nvim_ver=${1:-v0.10.0}
+  local nvim_ver=${1:-v0.10.4}
 
-  echo "Installing neovim version $_nvim_ver"
+  echo "Installing neovim version $nvim_ver"
 
-  curl -L https://github.com/neovim/neovim/releases/download/$_nvim_ver/nvim.appimage \
+  local arch="$(uname -m)"
+  local nvim_file="nvim-linux-${arch}.appimage"
+
+  curl -L "https://github.com/neovim/neovim/releases/download/${nvim_ver}/${nvim_file}" \
     --output "${APT_LOCAL_BIN_DIR}/nvim.appimage" \
     --fail-with-body
   mv ${APT_LOCAL_BIN_DIR}/nvim.appimage ${APT_LOCAL_BIN_DIR}/nvim
