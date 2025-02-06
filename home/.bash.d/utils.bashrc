@@ -364,7 +364,6 @@ extract()
 # File types utils
 #
 
-# csv_merge output.csv *.csv
 csv_merge()
 {
   _arg_assert_exists "$1" "usage: csv_merge <csv-merged-output> <csv-file_1> ..." || return
@@ -375,7 +374,6 @@ csv_merge()
   awk '(NR == 1) || (FNR > 1)' "$@" > $__output
 }
 
-# csv_print file.csv ,
 csv_print()
 {
   _arg_assert_exists "$1" "usage: csv_print <csv-file> <delimiter>" || return
@@ -393,7 +391,6 @@ csv_print_col()
   cat $1 | awk -F "$2" "{print \$$3}"
 }
 
-# csv_read file.csv ,
 csv_read()
 {
   _arg_assert_exists "$1" "usage: csv_read <csv-file> <delimiter>" || return
@@ -416,4 +413,62 @@ ini_get()
       | grep '^\['${__section}'\]'${__key}'=' \
       | perl -pe 's/.*=//' \
       | tail -n 1
+}
+
+#
+# Strings utils
+#
+
+str_contains()
+{
+  [[ "$1" == *"$2"* ]];
+}
+
+str_starts_with()
+{
+  [[ "$1" == "$2"* ]];
+}
+
+str_ends_with()
+{
+  [[ "$1" == *"$2" ]];
+}
+
+strsub()
+{
+  _arg_assert_exists "$1" "usage: strsub <string> <start> <length>" || return
+  _arg_assert_number "$2" "usage: strsub <string> <start> <length>" || return
+  _arg_assert_number "$3" "usage: strsub <string> <start> <length>" || return
+
+  echo "${1:$2:$3}"
+}
+
+strlen()
+{
+  _arg_assert_exists "$1" "usage: strlen <string>" || return
+
+  echo "${#1}"
+}
+
+str_upper()
+{
+  _arg_assert_exists "$1" "usage: str_upper <string>" || return
+
+  echo "${1^^}"
+}
+
+str_lower()
+{
+  _arg_assert_exists "$1" "usage: str_lower <string>" || return
+
+  echo "${1,,}"
+}
+
+str_replace()
+{
+  _arg_assert_exists "$1" "usage: str_replace <string> <search> <replace>" || return
+  _arg_assert_exists "$2" "usage: str_replace <string> <search> <replace>" || return
+  _arg_assert_exists "$3" "usage: str_replace <string> <search> <replace>" || return
+
+  echo "${1//$2/$3}"
 }

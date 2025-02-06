@@ -2,20 +2,15 @@
 # Cargo
 #
 
-__cargo_assert_installed()
-{
-  if ! bin_exists cargo; then
-    __pkg_manager_install cargo
-  fi
-}
-
 __cargo_install()
 (
    __prepare_local_install
-   __cargo_assert_installed
 
   if ! bin_exists cargo; then
     __pkg_manager_install cargo
+    if [[ ! "$PATH" == *$HOME/.cargo/bin* ]]; then
+      export PATH="${PATH}:$HOME/.cargo/bin"
+    fi
   fi
 
   local projname="$1"

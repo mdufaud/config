@@ -19,7 +19,8 @@ function install_list()
 
 __prepare_local_install()
 {
-  mkdir -p $APT_DIR/bin
+  mkdir -p "$APT_DIR/bin"
+  mkdir -p "$HOME/.local/bin"
 }
 
 __pkg_manager_install()
@@ -210,10 +211,13 @@ _install_bat()
 (
   set -e
 
-  __pkg_manager_install bat
+  if ! bin_exists batcat; then
+    __pkg_manager_install bat
+  fi
+
+  __prepare_local_install
 
   if bin_exists batcat; then
-    mkdir -p $HOME/.local/bin
     rm -f $HOME/.local/bin/bat
     ln -s $(command -v batcat) $HOME/.local/bin/bat
   fi
@@ -306,7 +310,8 @@ fzf_select()
 }
 
 _install_fzf()
-{
+(
+  set -e
   __prepare_local_install
 
   # fzf
@@ -333,7 +338,11 @@ _install_fzf()
   fi
 
   . $fzf_git_path/fzf-git.sh
-}
+
+  if [[ ! "$PATH" == *$APT_DIR/fzf/bin* ]]; then
+    export PATH="${PATH}:$APT_DIR/fzf/bin"
+  fi
+)
 
 if [[ ! "$PATH" == *$APT_DIR/fzf/bin* ]]; then
   PATH="${PATH}:$APT_DIR/fzf/bin"
@@ -359,6 +368,8 @@ fi
 _install_nvim()
 (
   set -e
+  __prepare_local_install
+
   local _nvim_ver=${1:-v0.10.0}
 
   echo "Installing neovim version $_nvim_ver"
@@ -419,6 +430,7 @@ fi
 
 _install_neofetch()
 (
+  set -e
   __prepare_local_install
 
   if [ -d $APT_DIR/neofetch ]; then

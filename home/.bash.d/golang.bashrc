@@ -2,9 +2,12 @@
 # Golang
 #
 
-__go_assert_installed()
-(
+__go_install()
+{
+   __prepare_local_install
+
   if ! bin_exists go; then
+    # Install latest go version
     local go_version="1.20"
     local go_tarname
     local arch="$(uname -m)"
@@ -14,44 +17,43 @@ __go_assert_installed()
       go_tarname="go${go_version}.linux-amd64.tar.gz"
     fi
 
-    mkdir -p $HOME/apt \
-      && cd /tmp \
-      && wget "https://golang.org/dl/$go_tarname" \
-      && tar -C $HOME/apt -xzf "$go_tarname" \
-      && rm "$go_tarname"
+    (
+      mkdir -p $HOME/apt \
+        && cd /tmp \
+        && wget "https://golang.org/dl/$go_tarname" \
+        && tar -C $HOME/apt -xzf "$go_tarname" \
+        && rm "$go_tarname"
+    )
 
-    __go_setup
-  fi
-)
-
-__go_setup()
-{
-  if [ -d "$HOME/apt/go" ]; then
     export GO111MODULE=on
     export GOROOT="$HOME/apt/go"
     export GOPATH="$HOME/.go"
+    if [[ ! "$PATH" == *${GOROOT}/bin:${GOPATH}/bin* ]]; then
+      export PATH="${PATH}:${GOROOT}/bin:${GOPATH}/bin"
+    fi
     mkdir -p "$GOPATH"
-    export PATH="$GOROOT/bin:$GOPATH/bin:$PATH"
   fi
+
+  go install $@
 }
 
-__go_setup
-
-#
-# Installers
-#
+if bin_exists go; then
+  export GO111MODULE=on
+  export GOROOT="$HOME/apt/go"
+  export GOPATH="$HOME/.go"
+  if [[ ! "$PATH" == *${GOROOT}/bin:${GOPATH}/bin* ]]; then
+    export PATH="${PATH}:${GOROOT}/bin:${GOPATH}/bin"
+  fi
+  mkdir -p "$GOPATH"
+fi
 
 #
 # LF file explorer
 #
 
 function _install_lf() {
-  __go_assert_installed
-
   if ! bin_exists lf; then
-      env CGO_ENABLED=0 go install -ldflags="-s -w" github.com/gokcehan/lf@latest
-  else
-    print_err "LF already installed"
+      env CGO_ENABLED=0 __go_install -ldflags="-s -w" github.com/gokcehan/lf@r33
   fi
 }
 
@@ -61,9 +63,8 @@ function _install_lf() {
 
 function _install_qrcode_terminal()
 {
-  __go_assert_installed
-
-  go install github.com/dawndiy/qrcode-terminal@latest
+  # no tags
+  __go_install github.com/dawndiy/qrcode-terminal@latest
 }
 
 #
@@ -71,11 +72,9 @@ function _install_qrcode_terminal()
 #
 
 function _install_charm() {
-  __go_assert_installed
-
   # Markdown reader
-  go install github.com/charmbracelet/glow@v1.5.1
-  go install github.com/charmbracelet/gum@v0.13.0
+  __go_install github.com/charmbracelet/glow@v1.5.1
+  __go_install github.com/charmbracelet/gum@v0.13.0
 }
 
 #
@@ -84,9 +83,7 @@ function _install_charm() {
 
 _install_yq()
 {
-  __go_assert_installed
-
-  go install github.com/mikefarah/yq/v4@latest
+  __go_install github.com/mikefarah/yq@v4.45.1
 }
 
 
