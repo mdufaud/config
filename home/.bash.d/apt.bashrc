@@ -375,7 +375,7 @@ _install_nvim()
 
   local arch="$(uname -m)"
   if [ "$arch" = "aarch64" ]; then
-    arch="amd64"
+    arch="arm64"
   else
     arch="x86_64"
   fi
