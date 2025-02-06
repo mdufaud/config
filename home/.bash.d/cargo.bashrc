@@ -14,9 +14,14 @@ __cargo_install()
   fi
 
   local projname="$1"
-  local github_url="$2"
-  local tag_name="$3"
 
+  local github_url="$2"
+  if ! is_http "$github_url"; then
+    cargo install "$@"
+    return
+  fi
+
+  local tag_name="$3"
   if [ -n "$tag_name" ]; then
     tag_name="--branch $tag_name"
   fi
@@ -73,8 +78,46 @@ _install_bandwhich()
 
 _install_delta()
 {
-  if ! bin_exists cargo; then
-    __pkg_manager_install cargo
-  fi
-  cargo install git-delta
+  __cargo_install git-delta
 }
+
+#
+# Eza (better ls)
+#
+
+_install_eza()
+{
+  __pkg_manager_install eza 1>/dev/null 2>/dev/null
+
+  if [ $? -ne 0 ]; then
+    __cargo_install eza https://github.com/eza-community/eza.git v0.19.1
+  fi
+}
+
+alias bls="eza --long --tree --level 4 --total-size --binary --header --group --icons=always"
+alias blsa="bls -A"
+
+#
+# Hyperfine (Benchmarker)
+#
+
+_install_hyperfine()
+{
+  __cargo_install --version 1.16.1 hyperfine
+}
+
+#
+# Rg (cli ripgrep better grep)
+#
+
+_install_rg()
+{
+  __cargo_install --version 14.1.0 ripgrep
+  export FZF_DEFAULT_COMMAND="rg --files --hidden -g '!.git'"
+  export FZF_CTRL_T_COMMAND="rg --files --hidden -g '!.git'"
+}
+
+if bin_exists rg; then
+    export FZF_DEFAULT_COMMAND="rg --files --hidden -g '!.git'"
+    export FZF_CTRL_T_COMMAND="rg --files --hidden -g '!.git'"
+fi

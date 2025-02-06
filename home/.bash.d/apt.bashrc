@@ -1,4 +1,5 @@
 export APT_DIR="$HOME/apt"
+export APT_LOCAL_BIN_DIR="$HOME/.local/bin"
 
 function install_list()
 (
@@ -19,8 +20,8 @@ function install_list()
 
 __prepare_local_install()
 {
-  mkdir -p "$APT_DIR/bin"
-  mkdir -p "$HOME/.local/bin"
+  mkdir -p "${APT_DIR}/bin"
+  mkdir -p "${APT_LOCAL_BIN_DIR}"
 }
 
 __pkg_manager_install()
@@ -218,8 +219,8 @@ _install_bat()
   __prepare_local_install
 
   if bin_exists batcat; then
-    rm -f $HOME/.local/bin/bat
-    ln -s $(command -v batcat) $HOME/.local/bin/bat
+    rm -f ${APT_LOCAL_BIN_DIR}/bat
+    ln -s $(command -v batcat) ${APT_LOCAL_BIN_DIR}/bat
   fi
 )
 
@@ -316,7 +317,7 @@ _install_fzf()
 
   # fzf
 
-  local fzf_path="$APT_DIR/fzf"
+  local fzf_path="${APT_DIR}/fzf"
 
   if [ -e $fzf_path ]; then
     git -C $fzf_path pull
@@ -329,7 +330,7 @@ _install_fzf()
 
   # fzf-git
 
-  local fzf_git_path="$APT_DIR/fzf-git"
+  local fzf_git_path="${APT_DIR}/fzf-git"
 
   if [ -e $fzf_git_path ]; then
     git -C $fzf_git_path pull
@@ -338,24 +339,20 @@ _install_fzf()
   fi
 
   . $fzf_git_path/fzf-git.sh
-
-  if [[ ! "$PATH" == *$APT_DIR/fzf/bin* ]]; then
-    export PATH="${PATH}:$APT_DIR/fzf/bin"
-  fi
 )
 
-if [[ ! "$PATH" == *$APT_DIR/fzf/bin* ]]; then
-  PATH="${PATH}:$APT_DIR/fzf/bin"
+if [[ ! "$PATH" == *${APT_DIR}/fzf/bin* ]]; then
+  PATH="${PATH}:${APT_DIR}/fzf/bin"
 fi
 
 if bin_exists fzf; then
   eval "$(fzf --bash)"
 fi
 
-if [[ -f $APT_DIR/fzf-git/fzf-git.sh ]]; then
+if [[ -f ${APT_DIR}/fzf-git/fzf-git.sh ]]; then
   # the script actually exit because it takes an argument which does not exists
   __tmp_sourcing() {
-    . $APT_DIR/fzf-git/fzf-git.sh
+    . ${APT_DIR}/fzf-git/fzf-git.sh
   }
   __tmp_sourcing
   unset __tmp_sourcing
@@ -374,55 +371,16 @@ _install_nvim()
 
   echo "Installing neovim version $_nvim_ver"
 
-  mkdir -p $HOME/.local/bin
-  curl https://github.com/neovim/neovim/releases/download/$_nvim_ver/nvim.appimage --output $HOME/.local/bin
-  chmod +x $HOME/.local/bin/nvim.appimage
-  mv $HOME/.local/bin/nvim.appimage $HOME/.local/bin/nvim
+  mkdir -p ${APT_LOCAL_BIN_DIR}
+  curl https://github.com/neovim/neovim/releases/download/$_nvim_ver/nvim.appimage --output ${APT_LOCAL_BIN_DIR}
+  chmod +x ${APT_LOCAL_BIN_DIR}/nvim.appimage
+  mv ${APT_LOCAL_BIN_DIR}/nvim.appimage ${APT_LOCAL_BIN_DIR}/nvim
 
   mkdir -p $HOME/.config/nvim
   curl https://raw.githubusercontent.com/nvim-lua/kickstart.nvim/master/init.lua --output $HOME/.config/nvim/init.lua
 
   echo "Use :Mason to install code servers"
 )
-
-#
-# Rg (cli ripgrep better grep)
-#
-
-_install_rg()
-{
-  if is_ubuntu; then
-    local rg_arch_file
-    local rg_arch_ext
-    local rg_version="14.1.0"
-    local arch="$(uname -m)"
-    if [ "$arch" = "amd64" ] || [ "$arch" = "x86_64" ]; then
-      rg_arch_ext=".deb"
-      rg_arch_file="ripgrep_${rg_version}-1_amd64"
-    else
-      rg_arch_ext=".tar.gz"
-      rg_arch_file="ripgrep-${rg_version}-${arch}-unknown-linux-gnu"
-    fi
-    (
-        set -e
-        cd /tmp
-        curl -LO "https://github.com/BurntSushi/ripgrep/releases/download/${rg_version}/${rg_arch_file}${rg_arch_ext}" --fail-with-body
-        if [ "${rg_arch_ext}" = ".deb" ]; then
-          sudo dpkg -i "/tmp/${rg_arch_file}${rg_arch_ext}"
-        else
-          tar -xzf "/tmp/${rg_arch_file}${rg_arch_ext}" -C /tmp
-          sudo cp /tmp/${rg_arch_file}/rg /usr/local/bin
-        fi
-    )
-  else
-    __pkg_manager_install ripgrep
-  fi
-}
-
-if bin_exists rg; then
-    export FZF_DEFAULT_COMMAND="rg --files --hidden -g '!.git'"
-    export FZF_CTRL_T_COMMAND="rg --files --hidden -g '!.git'"
-fi
 
 #
 # Neofetch (OS and hardware data)
@@ -433,13 +391,13 @@ _install_neofetch()
   set -e
   __prepare_local_install
 
-  if [ -d $APT_DIR/neofetch ]; then
-    cd $APT_DIR/neofetch
+  if [ -d ${APT_DIR}/neofetch ]; then
+    cd ${APT_DIR}/neofetch
     git checkout 7.1.0
     git pull
   else
-    git clone --depth 1 --branch 7.1.0 https://github.com/dylanaraps/neofetch.git $APT_DIR/neofetch
-    cd $APT_DIR/neofetch
+    git clone --depth 1 --branch 7.1.0 https://github.com/dylanaraps/neofetch.git ${APT_DIR}/neofetch
+    cd ${APT_DIR}/neofetch
   fi
 
   local opt_sudo
@@ -484,28 +442,16 @@ _install_asciinema()
 _install_gdb_init()
 {
   if [ -f ~/.gdbinit ]; then
+    if [ -f ~/.gdbinit.old ]; then
+      print_error "You already have a .gdbinit.old file"
+      return 1
+    fi
+    echo "Moving current .gdbinit to .gdbinit.old"
     mv ~/.gdbinit ~/.gdbinit.old
   fi
   wget -P ~ https://github.com/cyrus-and/gdb-dashboard/raw/master/.gdbinit
   # get coloration:
   # pip install pygments
-}
-
-#
-# Hyperfine (Benchmarker)
-#
-
-_install_hyperfine()
-{
-  if is_ubuntu; then
-    (
-      cd /tmp && \
-      curl -LO https://github.com/sharkdp/hyperfine/releases/download/v1.16.1/hyperfine_1.16.1_amd64.deb && \
-      sudo dpkg -i /tmp/hyperfine_1.16.1_amd64.deb
-    )
-  else
-    __pkg_manager_install hyperfine
-  fi
 }
 
 #
@@ -523,41 +469,8 @@ _install_exiftool()
   cd $APT_DIR/exiftool
   perl Makefile.PL
   make
-
-  local opt_sudo
-  if bin_exists sudo; then opt_sudo="sudo"; fi
-
-  $opt_sudo make install
+  sudo make install
 )
-
-#
-# Duf (better df)
-#
-
-_install_duf()
-{
-  __pkg_manager_install duf 1>/dev/null 2>/dev/null
-
-  if [ $? -ne 0 ]; then
-    go install github.com/muesli/duf@latest
-  fi
-}
-
-#
-# Eza (better ls)
-#
-
-_install_eza()
-{
-  __pkg_manager_install eza 1>/dev/null 2>/dev/null
-
-  if [ $? -ne 0 ]; then
-    __cargo_install eza https://github.com/eza-community/eza.git v0.19.1
-  fi
-}
-
-alias bls="eza --long --tree --level 4 --total-size --binary --header --group --icons=always"
-alias blsa="bls -A"
 
 #
 # Nerdfonts

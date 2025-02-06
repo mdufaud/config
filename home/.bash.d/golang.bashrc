@@ -34,7 +34,7 @@ __go_install()
     mkdir -p "$GOPATH"
   fi
 
-  go install $@
+  go install "$@"
 }
 
 if bin_exists go; then
@@ -52,9 +52,7 @@ fi
 #
 
 function _install_lf() {
-  if ! bin_exists lf; then
-      env CGO_ENABLED=0 __go_install -ldflags="-s -w" github.com/gokcehan/lf@r33
-  fi
+  CGO_ENABLED=0 __go_install -ldflags="-s -w" github.com/gokcehan/lf@r33
 }
 
 #
@@ -84,6 +82,20 @@ function _install_charm() {
 _install_yq()
 {
   __go_install github.com/mikefarah/yq@v4.45.1
+}
+
+
+#
+# Duf (better df)
+#
+
+_install_duf()
+{
+  __pkg_manager_install duf 1>/dev/null 2>/dev/null
+
+  if [ $? -ne 0 ]; then
+    __go_install github.com/muesli/duf@latest
+  fi
 }
 
 
