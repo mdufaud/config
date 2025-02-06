@@ -374,6 +374,11 @@ _install_nvim()
   echo "Installing neovim version $nvim_ver"
 
   local arch="$(uname -m)"
+  if [ "$arch" = "aarch64" ]; then
+    arch="amd64"
+  else
+    arch="x86_64"
+  fi
   local nvim_file="nvim-linux-${arch}.appimage"
 
   curl -L "https://github.com/neovim/neovim/releases/download/${nvim_ver}/${nvim_file}" \
