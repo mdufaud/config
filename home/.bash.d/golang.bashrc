@@ -27,9 +27,11 @@ __go_assert_installed()
 __go_setup()
 {
   if [ -d "$HOME/apt/go" ]; then
+    export GO111MODULE=on
+    export GOROOT="$HOME/apt/go"
     export GOPATH="$HOME/.go"
     mkdir -p "$GOPATH"
-    export PATH="$HOME/apt/go/bin:$GOPATH/bin:$PATH"
+    export PATH="$GOROOT/bin:$GOPATH/bin:$PATH"
   fi
 }
 

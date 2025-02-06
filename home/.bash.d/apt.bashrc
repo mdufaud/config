@@ -391,7 +391,7 @@ _install_rg()
       rg_arch_file="ripgrep-${rg_version}-${arch}-unknown-linux-gnu"
     fi
     (
-        set -ex
+        set -e
         cd /tmp
         curl -LO "https://github.com/BurntSushi/ripgrep/releases/download/${rg_version}/${rg_arch_file}${rg_arch_ext}" --fail-with-body
         if [ "${rg_arch_ext}" = ".deb" ]; then
