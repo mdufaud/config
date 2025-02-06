@@ -15,7 +15,7 @@ __go_assert_installed()
     fi
 
     mkdir -p $HOME/apt \
-      && cd $HOME/apt \
+      && cd /tmp \
       && wget "https://golang.org/dl/$go_tarname" \
       && tar -C $HOME/apt -xzf "$go_tarname" \
       && rm "$go_tarname"

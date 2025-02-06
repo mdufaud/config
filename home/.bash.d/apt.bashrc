@@ -379,12 +379,27 @@ _install_nvim()
 _install_rg()
 {
   if is_ubuntu; then
-    local __rg_version="14.1.0"
-    local __rg_deb="ripgrep_${__rg_version}-1_$(uname -m).deb"
+    local rg_arch_file
+    local rg_arch_ext
+    local rg_version="14.1.0"
+    local arch="$(uname -m)"
+    if [ "$arch" = "amd64" ] || [ "$arch" = "x86_64" ]; then
+      rg_arch_ext=".deb"
+      rg_arch_file="ripgrep_${rg_version}-1_amd64"
+    else
+      rg_arch_ext=".tar.gz"
+      rg_arch_file="ripgrep-${rg_version}-${arch}-unknown-linux-gnu"
+    fi
     (
-      cd /tmp && \
-        curl -LO "https://github.com/BurntSushi/ripgrep/releases/download/${__rg_version}/${__rg_deb}" && \
-        sudo dpkg -i "/tmp/${__rg_deb}"
+        set -ex
+        cd /tmp
+        curl -LO "https://github.com/BurntSushi/ripgrep/releases/download/${rg_version}/${rg_arch_file}${rg_arch_ext}" --fail-with-body
+        if [ "${rg_arch_ext}" = ".deb" ]; then
+          sudo dpkg -i "/tmp/${rg_arch_file}${rg_arch_ext}"
+        else
+          tar -xzf "/tmp/${rg_arch_file}${rg_arch_ext}" -C /tmp
+          sudo cp /tmp/${rg_arch_file}/rg /usr/local/bin
+        fi
     )
   else
     __pkg_manager_install ripgrep
