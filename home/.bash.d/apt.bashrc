@@ -366,7 +366,6 @@ fi
 
 _install_nvim()
 (
-  set -e
   __prepare_local_install
 
   local nvim_ver=${1:-v0.10.4}
@@ -384,15 +383,30 @@ _install_nvim()
   curl -L "https://github.com/neovim/neovim/releases/download/${nvim_ver}/${nvim_file}" \
     --output "${APT_LOCAL_BIN_DIR}/nvim.appimage" \
     --fail-with-body
-  mv ${APT_LOCAL_BIN_DIR}/nvim.appimage ${APT_LOCAL_BIN_DIR}/nvim
-  chmod +x ${APT_LOCAL_BIN_DIR}/nvim
+  chmod +x ${APT_LOCAL_BIN_DIR}/nvim.appimage
+
+  __pkg_manager_install libfuse2
+
+  if ${APT_LOCAL_BIN_DIR}/nvim.appimage -v 1>/dev/null 2>/dev/null; then
+    mv ${APT_LOCAL_BIN_DIR}/nvim.appimage ${APT_LOCAL_BIN_DIR}/nvim
+  else
+    # cannot use libfuse - extracting package
+    (
+      set -e
+      cd ${APT_DIR}
+      mv ${APT_LOCAL_BIN_DIR}/nvim.appimage nvim.appimage
+      ./nvim.appimage --appimage-extract
+      ./squashfs-root/AppRun --version
+      mv squashfs-root nvim
+      ln -s squashfs-root/AppRun ${APT_LOCAL_BIN_DIR}/nvim
+    )
+  fi
 
   mkdir -p $HOME/.config/nvim
   curl -L https://raw.githubusercontent.com/nvim-lua/kickstart.nvim/master/init.lua \
     --output $HOME/.config/nvim/init.lua \
     --fail-with-body
 
-  __pkg_manager_install libfuse2
 
   echo "Use :Mason to install code servers"
 )
