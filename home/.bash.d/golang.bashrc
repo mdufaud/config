@@ -81,7 +81,7 @@ function _install_charm() {
 
 _install_yq()
 {
-  __go_install github.com/mikefarah/yq@v4.45.1
+  __go_install github.com/mikefarah/yq/v4@v4.40.1
 }
 
 
@@ -94,7 +94,7 @@ _install_duf()
   __pkg_manager_install duf 1>/dev/null 2>/dev/null
 
   if [ $? -ne 0 ]; then
-    __go_install github.com/muesli/duf@latest
+    __go_install github.com/muesli/duf@v0.8.1
   fi
 }
 
