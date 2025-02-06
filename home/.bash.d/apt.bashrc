@@ -1,6 +1,8 @@
 export APT_DIR="$HOME/apt"
 export APT_LOCAL_BIN_DIR="$HOME/.local/bin"
 
+PATH="${PATH}:${APT_LOCAL_BIN_DIR}"
+
 function install_list()
 (
   set -e
