@@ -213,8 +213,9 @@ _install_bat()
   __pkg_manager_install bat
 
   if bin_exists batcat; then
-    rm -f ~/.local/bin/bat
-    ln -s ~/.local/bin/bat $(command -v batcat)
+    mkdir -p $HOME/.local/bin
+    rm -f $HOME/.local/bin/bat
+    ln -s $(command -v batcat) $HOME/.local/bin/bat
   fi
 )
 
@@ -362,6 +363,7 @@ _install_nvim()
 
   echo "Installing neovim version $_nvim_ver"
 
+  mkdir -p $HOME/.local/bin
   curl https://github.com/neovim/neovim/releases/download/$_nvim_ver/nvim.appimage --output $HOME/.local/bin
   chmod +x $HOME/.local/bin/nvim.appimage
   mv $HOME/.local/bin/nvim.appimage $HOME/.local/bin/nvim
