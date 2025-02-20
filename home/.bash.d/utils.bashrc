@@ -480,3 +480,25 @@ str_replace()
 
   echo "${1//$2/$3}"
 }
+
+str_trim_left()
+{
+  _arg_assert_exists "$1" "usage: str_trim_left <string>" || return
+
+  echo "${1#"${1%%[![:space:]]*}"}"
+}
+
+str_trim_right()
+{
+  _arg_assert_exists "$1" "usage: str_trim_right <string>" || return
+
+  echo "${1%"${1##*[![:space:]]}"}"
+}
+
+str_trim()
+{
+  _arg_assert_exists "$1" "usage: str_trim <string>" || return
+
+  local trimmed_left=$(str_trim_left "$1")
+  str_trim_right "$trimmed_left"
+}

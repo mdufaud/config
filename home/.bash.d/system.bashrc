@@ -299,3 +299,121 @@ strace_file()
                       # trace / signal / status / fds  / path / CMD or PID
   _strace_pid_or_cmd "%file"   'all'    'all'   'all'  'all'   "$@"
 }
+
+#
+# Dbus
+#
+
+dbus_list_services()
+{
+  dbus-send --system --dest=org.freedesktop.DBus --type=method_call --print-reply \
+    /org/freedesktop/DBus org.freedesktop.DBus.ListNames | grep string | awk -F\" '{print $2}'
+}
+
+dbus_service_info()
+{
+  _arg_assert_exists "$1" "usage: dbus_service_info <service_name>" || return
+
+  dbus-send --system --dest=org.freedesktop.DBus --type=method_call --print-reply \
+    /org/freedesktop/DBus org.freedesktop.DBus.GetConnectionUnixProcessID \
+    string:"$1"
+}
+
+dbus_call_method()
+{
+  _arg_assert_exists "$1" "usage: dbus_call_method <service_name> <object_path> <interface_name> <method_name> [args...]" || return
+  _arg_assert_exists "$2" "usage: dbus_call_method <service_name> <object_path> <interface_name> <method_name> [args...]" || return
+  _arg_assert_exists "$3" "usage: dbus_call_method <service_name> <object_path> <interface_name> <method_name> [args...]" || return
+  _arg_assert_exists "$4" "usage: dbus_call_method <service_name> <object_path> <interface_name> <method_name> [args...]" || return
+
+  local service_name=$1
+  local object_path=$2
+  local interface_name=$3
+  local method_name=$4
+  shift 4
+
+  dbus-send --system --dest="$service_name" --type=method_call --print-reply \
+    "$object_path" "$interface_name"."$method_name" "$@"
+}
+
+#
+# NetworkManager
+#
+
+nm_list_devices()
+{
+  dbus_call_method org.freedesktop.NetworkManager /org/freedesktop/NetworkManager org.freedesktop.NetworkManager GetDevices
+}
+
+nm_device_info()
+{
+  _arg_assert_exists "$1" "usage: nm_device_info <device_path>" || return
+
+  dbus_call_method org.freedesktop.NetworkManager "$1" org.freedesktop.DBus.Properties GetAll string:"org.freedesktop.NetworkManager.Device"
+}
+
+nm_list_connections()
+{
+  dbus_call_method org.freedesktop.NetworkManager /org/freedesktop/NetworkManager/Settings org.freedesktop.NetworkManager.Settings ListConnections
+}
+
+nm_connection_info()
+{
+  _arg_assert_exists "$1" "usage: nm_connection_info <connection_path>" || return
+
+  dbus_call_method org.freedesktop.NetworkManager "$1" org.freedesktop.DBus.Properties GetAll string:"org.freedesktop.NetworkManager.Settings.Connection"
+}
+
+#
+# Systemd
+#
+
+dbus_query_systemd()
+{
+  _arg_assert_exists "$1" "usage: dbus_query_systemd <method_name> [args...]" || return
+
+  local method_name=$1
+  shift
+
+  dbus_call_method org.freedesktop.systemd1 /org/freedesktop/systemd1 org.freedesktop.systemd1.Manager "$method_name" "$@"
+}
+
+systemd_list_units()
+{
+  dbus_query_systemd ListUnits
+}
+
+systemd_list_jobs()
+{
+  dbus_query_systemd ListJobs
+}
+
+#
+# wpa_supplicant
+#
+
+wpa_list_interfaces()
+{
+  dbus_call_method fi.w1.wpa_supplicant1 /fi/w1/wpa_supplicant1 org.freedesktop.DBus.Properties GetAll string:"fi.w1.wpa_supplicant1"
+}
+
+wpa_interface_info()
+{
+  _arg_assert_exists "$1" "usage: wpa_interface_info <interface_path>" || return
+
+  dbus_call_method fi.w1.wpa_supplicant1 "$1" org.freedesktop.DBus.Properties GetAll string:"fi.w1.wpa_supplicant1.Interface"
+}
+
+wpa_list_networks()
+{
+  _arg_assert_exists "$1" "usage: wpa_list_networks <interface_path>" || return
+
+  dbus_call_method fi.w1.wpa_supplicant1 "$1" org.freedesktop.DBus.Properties GetAll string:"fi.w1.wpa_supplicant1.Interface.Network"
+}
+
+wpa_network_info()
+{
+  _arg_assert_exists "$1" "usage: wpa_network_info <network_path>" || return
+
+  dbus_call_method fi.w1.wpa_supplicant1 "$1" org.freedesktop.DBus.Properties GetAll string:"fi.w1.wpa_supplicant1.Network"
+}
