@@ -396,9 +396,10 @@ _install_nvim()
       cd ${APT_DIR}
       mv ${APT_LOCAL_BIN_DIR}/nvim.appimage nvim.appimage
       ./nvim.appimage --appimage-extract
+      # TODO: glibc error not foud
       ./squashfs-root/AppRun --version
       mv squashfs-root nvim
-      ln -s squashfs-root/AppRun ${APT_LOCAL_BIN_DIR}/nvim
+      ln -s nvim/AppRun ${APT_LOCAL_BIN_DIR}/nvim
     )
   fi
 

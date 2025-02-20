@@ -53,6 +53,12 @@ clip_copy()
     else
       echo "$1" > /dev/clipboard
     fi
+  elif bin_exists termux-clipboard-set; then
+    if is_shell_stdin_piped; then
+      termux-clipboard-set
+    else
+      termux-clipboard-set "$1"
+    fi
   fi
 }
 
@@ -66,6 +72,8 @@ clip_paste()
     pbpaste
   elif [ -r "/dev/clipboard" ]; then
     cat /dev/clipboard
+  elif bin_exists termux-clipboard-get; then
+    termux-clipboard-get
   fi
 }
 
