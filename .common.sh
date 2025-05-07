@@ -30,6 +30,7 @@ list_targets()
   echo "[home/.vimrc]=$HOME/.vimrc"
   echo "[home/.bashrc]=$HOME/.bashrc"
   echo "[home/.LS_COLORS]=$HOME/.LS_COLORS"
+  echo "[home/.inputrc]=$HOME/.inputrc"
   echo "[home/.bash.d]=$HOME/.bash.d"
   echo "[apt/.config/lf]=$HOME/.config/lf"
   echo "[apt/.gitalias]=$HOME/.gitalias"
