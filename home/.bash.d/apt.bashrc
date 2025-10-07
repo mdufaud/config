@@ -1,7 +1,8 @@
 export APT_DIR="$HOME/apt"
+export APT_BIN_DIR="${APT_DIR}/bin"
 export APT_LOCAL_BIN_DIR="$HOME/.local/bin"
 
-PATH="${PATH}:${APT_LOCAL_BIN_DIR}"
+PATH="${PATH}:${APT_BIN_DIR}:${APT_LOCAL_BIN_DIR}"
 
 function install_list()
 (
@@ -12,9 +13,10 @@ function install_list()
   fi
 
   local list="$(declare -F | grep _install_ | sed 's/declare -f //g')"
-  local selection="$(echo "$list" | fzf --multi --cycle)"
+  local selection
+  selection="$(fzf --multi --cycle <<< "$list")"
 
-  for cmd in ${selection}; do
+  for cmd in ${selection}; do 
     echo "$cmd"
     $cmd
   done
@@ -22,28 +24,52 @@ function install_list()
 
 __prepare_local_install()
 {
-  mkdir -p "${APT_DIR}/bin"
+  mkdir -p "${APT_BIN_DIR}"
   mkdir -p "${APT_LOCAL_BIN_DIR}"
+}
+
+export PKG_MANAGER=""
+export PKG_MANAGER_INSTALL_CMD=""
+
+__pkg_manager_setup()
+{
+  if [ -z "$PKG_MANAGER" ]; then
+    if bin_exists pacman; then
+      PKG_MANAGER="pacman"
+      PKG_MANAGER_INSTALL_CMD="-S --noconfirm"
+    elif bin_exists pkg; then
+      PKG_MANAGER="pkg"
+      PKG_MANAGER_INSTALL_CMD="install -y"
+    elif bin_exists apt; then
+      PKG_MANAGER="apt"
+      PKG_MANAGER_INSTALL_CMD="install -y"
+    elif bin_exists apk; then
+      PKG_MANAGER="apk"
+      PKG_MANAGER_INSTALL_CMD="add --no-cache"
+    elif bin_exists dnf; then
+      PKG_MANAGER="dnf"
+      PKG_MANAGER_INSTALL_CMD="install -y"
+    elif bin_exists brew; then
+      PKG_MANAGER="brew"
+      PKG_MANAGER_INSTALL_CMD="install"
+    else
+      print_error "No package manager found"
+      return 1
+    fi
+  fi
+
+  local opt_sudo
+  if bin_exists sudo; then
+    opt_sudo="sudo "
+  fi
+
+  PKG_MANAGER="${opt_sudo}${PKG_MANAGER}"
 }
 
 __pkg_manager_install()
 {
-  local opt_sudo
-  if bin_exists sudo; then opt_sudo="sudo"; fi
-
-  if bin_exists pacman; then
-    $opt_sudo pacman -S $@
-  elif bin_exists pkg; then
-    $opt_sudo pkg install $@
-  elif bin_exists apt; then
-    $opt_sudo apt install $@
-  elif bin_exists apk; then
-    $opt_sudo apk add $@
-  elif bin_exists dnf; then
-    $opt_sudo dnf install $@
-  elif bin_exists brew; then
-    $opt_sudo brew install $@
-  fi
+  __pkg_manager_setup
+  $PKG_MANAGER $PKG_MANAGER_INSTALL_CMD $@
 }
 
 #
@@ -57,12 +83,12 @@ if bin_exists git; then
   fi
 fi
 
-alias gita="git add -A"
-alias gitc="git commit -m"
-alias gits="git status"
+# alias gita="git add -A"
+# alias gitc="git commit -m"
+# alias gits="git status"
 alias git_rebase_from_head="git rebase -i HEAD~"
-alias git_rebase_abort="git rebase --abort"
-alias git_rebase_continue="git rebase --continue"
+# alias git_rebase_abort="git rebase --abort"
+# alias git_rebase_continue="git rebase --continue"
 alias git_amend="git commit --amend"
 alias git_conf="git config --list --show-origin --show-scope"
 alias is_git_repo="git rev-parse --is-inside-work-tree 2>&- 1>&-"
@@ -244,7 +270,7 @@ alias valgrind_leak="valgrind --leak-check=yes"
 alias vleak="valgrind_leak"
 
 cachegrind() (
-  valgrind --tool=cachegrind $1 &
+  valgrind --tool=cachegrind $@ &
   local pid=$!
   trap "kill -SIGINT $pid" INT
   wait
@@ -259,7 +285,7 @@ cachegrind() (
 )
 
 callgrind() (
-  valgrind --tool=callgrind $1 &
+  valgrind --tool=callgrind $@ &
   local pid=$!
   trap "kill -SIGINT $pid" INT
   wait
@@ -513,7 +539,7 @@ _install_nerdfonts()
     cd /tmp/nerdfont
     wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/CascadiaMono.zip
     unzip CascadiaMono.zip
-    open_explorer .
+    explorer .
   else
     mkdir -p ~/.local/share/fonts
     cd ~/.local/share/fonts

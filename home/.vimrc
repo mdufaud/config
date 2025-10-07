@@ -122,7 +122,7 @@ let g:python_highlight_all = 1
 set backspace=indent,eol,start
 
 set history=200		" keep 200 lines of command line history
-set ruler		    " show the cursor position all the time
+set ruler		      " show the cursor position all the time
 set showcmd		    " display incomplete commands
 
 set ttimeout		" time out for key codes
@@ -232,20 +232,15 @@ set guicursor+=i:blinkwait10
 " Cursor
 
 if &term =~ "xterm\\|rxvt"
-  " use an orange cursor in insert mode
-  " let &t_SI = "\<Esc>]12;orange\x7"
-  " use a red cursor otherwise
-  " let &t_EI = "\<Esc>]12;red\x7"
+  " Set red block cursor in normal mode (on startup and after leaving insert)
+  autocmd VimEnter * silent !echo -ne "\e]12;red\a\e[1 q"
+  autocmd InsertLeave * silent !echo -ne "\e]12;red\a\e[1 q"
 
-  let &t_SI = "\e[5 q"   " cursor bar in insert mode
-  let &t_EI = "\e[2 q"   " cursor block in normal mode
+  " Set orange bar cursor in insert mode
+  autocmd InsertEnter * silent !echo -ne "\e]12;orange\a\e[6 q"
 
-  silent !echo -ne "\033]12;red\007"
-  " reset cursor when vim starts
-  autocmd VimEnter * silent !echo -ne "\033]112\007"
-  " reset cursor when vim exits
-  autocmd VimLeave * silent !echo -ne "\033]112\007"
-  " use \003]12;gray\007 for gnome-terminal and rxvt up to version 9.21
+  " Reset to default white block cursor on VimLeave
+  autocmd VimLeave * silent !echo -ne "\e]12;white\a\e[0 q"
 endif
 
 "

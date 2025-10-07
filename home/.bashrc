@@ -212,6 +212,7 @@ if [ -d $HOME/.bash.d ]; then
   load_script apt
   load_script golang
   load_script cargo
+  load_script archlinux
 
   unset load_script
 fi

@@ -2,8 +2,13 @@
 # Core
 #
 
-alias bash_reload='source $HOME/.bashrc'
+function bash_reload()
+{
+  source $HOME/.bashrc
+  bind -f $HOME/.inputrc
+}
 alias sh_reload='bash_reload'
+alias shreload='bash_reload'
 
 function bash_export()
 {
@@ -45,7 +50,7 @@ function bash_export_zip()
   done
 
   zip -r $__zip_output $__to_zip .bash.d
-  open_explorer $(dirname $__zip_output)
+  explorer $(dirname $__zip_output)
 )
 
 is_shell_interactive() { [[ $- == *i* ]]; }

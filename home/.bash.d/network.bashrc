@@ -545,3 +545,12 @@ EOF
   python3 "${srv_path}" "$port" "$cert_file" "$key_file"
   rm -f "${srv_path}"
 }
+
+function net_list_device()
+{
+  for iface in $(ls /sys/class/net); do
+    echo "Interface: $iface"
+    udevadm info -q all -p /sys/class/net/$iface | grep -E "ID_BUS|ID_MODEL|ID_VENDOR"
+    echo
+  done
+}

@@ -26,8 +26,9 @@ __go_install()
     )
 
     export GO111MODULE=on
-    export GOROOT="$HOME/apt/go"
     export GOPATH="$HOME/.go"
+    export GOPROXY="direct"
+    export GOSUMDB=off
     if [[ ! "$PATH" == *${GOROOT}/bin:${GOPATH}/bin* ]]; then
       export PATH="${PATH}:${GOROOT}/bin:${GOPATH}/bin"
     fi
@@ -39,8 +40,9 @@ __go_install()
 
 if bin_exists go; then
   export GO111MODULE=on
-  export GOROOT="$HOME/apt/go"
   export GOPATH="$HOME/.go"
+  export GOPROXY="direct"
+  export GOSUMDB=off
   if [[ ! "$PATH" == *${GOROOT}/bin:${GOPATH}/bin* ]]; then
     export PATH="${PATH}:${GOROOT}/bin:${GOPATH}/bin"
   fi

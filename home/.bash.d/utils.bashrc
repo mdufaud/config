@@ -29,23 +29,31 @@ function session_type()
 
 clip_copy()
 {
-  if bin_exists xclip; then
+  if is_x11; then
+    # pkg: xclip
     if is_shell_stdin_piped; then
       xclip -i -selection clipboard
     else
-      echo "$1" | xclip -i -selection clipboard
+      xclip -i -selection clipboard <<< "$1"
+    fi
+  elif is_wayland; then
+    # pkg: wl-clipboard
+    if is_shell_stdin_piped; then
+      wl-copy
+    else
+      wl-copy <<< "$1"
     fi
   elif is_wsl; then
     if is_shell_stdin_piped; then
       clip.exe
     else
-      echo "$1" | clip.exe
+      clip.exe <<< "$1"
     fi
   elif bin_exists pbcopy; then
     if is_shell_stdin_piped; then
       pbcopy
     else
-      echo "$1" | pbcopy
+      pbcopy <<< "$1"
     fi
   elif [ -w "/dev/clipboard" ]; then
     if is_shell_stdin_piped; then
@@ -64,8 +72,10 @@ clip_copy()
 
 clip_paste()
 {
-  if bin_exists xclip; then
+  if is_x11; then
     xclip -selection clipboard -o
+  elif is_wayland; then
+    wl-paste
   elif is_wsl; then
     powershell.exe Get-Clipboard
   elif bin_exists pbpaste; then
@@ -77,7 +87,7 @@ clip_paste()
   fi
 }
 
-open_explorer()
+explorer()
 {
   local path="${1:-.}"
 
@@ -151,17 +161,18 @@ alias ldiff="diff_no_common"
 
 findf()
 {
-  find ${2:-.} -maxdepth 20 -type f -name "*$1*"
+  _arg_assert_exists "$1" "usage: findf <search> [<path>]" || return
+  find "${2:-.}" -maxdepth 20 -type f -name "*$1*"
 }
 
 findd()
 {
-  find ${2:-.} -maxdepth 20 -type d -name "*$1*"
+  _arg_assert_exists "$1" "usage: findd <search> [<path>]" || return
+  find "${2:-.}" -maxdepth 20 -type d -name "*$1*"
 }
 
 file_contained_in()
 {
-  # file_contained_in subfile.txt bigfile.txt
   _arg_assert_exists "$1" "usage: file_contained_in <file-contained> <file-containing>" || return
   _arg_assert_exists "$2" "usage: file_contained_in <file-contained> <file-containing>" || return
 

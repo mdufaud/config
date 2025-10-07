@@ -10,6 +10,11 @@
   p = push
   cp = cherry-pick
 
+  # rebase
+  rbc = rebase --continue
+  rba = rebase --abort
+  rbH = rebase -i HEAD~
+
   # get master/main branch name
   main-branch = !"git branch -l main master --format '%(refname:short)' | head -n 1"
 
@@ -69,13 +74,13 @@
   la = !"git log-color --decorate --date=short --pretty=format:'%C(yellow)%H %C(green)%ad%C(red)%d %C(reset)%s %C(blue)[%cn]%C(reset)'"
   list-all = la
   # print last 20 commits in one line
-  l = !"git la -20 | cat && echo"
+  l = !"f() { git la -${1:-20} | cat && echo; } ; f"
   list = l
   # print last 20 commits graph
-  lg = !"git log-color -20 --oneline --graph --format='%C(auto)%h%d %s %C(black)%C(green)%cr %C(blue)[%cn]%C(reset)'| cat"
+  lg = !"f() { git log-color -${1:-20} --oneline --graph --format='%C(auto)%h%d %s %C(black)%C(green)%cr %C(blue)[%cn]%C(reset)'| cat; } ; f"
   list-graph = lg
   # print last 10 commits graph detailed
-  ls = !"git log-color -10 --graph --stat | cat"
+  ls = !"f() { git log-color -${1:-10} --graph --stat | cat; } ; f"
   # print last commit details
   last = !"git log-color -1 HEAD --stat | cat"
   # print all commits details from origin
@@ -148,6 +153,36 @@
       echo 'none - the commits are not related'; return 2; \
     fi; \
   }; f"
+
+  # show current repo size
+  repo-size = !"du -sh .git"
+
+  # show contributors sorted by number of commits
+  contributors = !"git shortlog -sn --all --no-merges"
+
+  # show commits by author
+  by-author = !"f() { git log --author=\"$1\" --oneline; } ; f"
+
+  # show tags sorted by date
+  tags-by-date = !"git for-each-ref --sort=-taggerdate --format '%(refname:short) %(taggerdate)' refs/tags"
+
+  # show all remotes and their URLs
+  remotes = remote -v
+
+  # show all tracked files sorted by size
+  largest-files = !"git ls-files | xargs -I{} du -h {} | sort -nr | head -20"
+
+  # show all TODOs in tracked files
+  todos = !"git grep -n TODO | cat"
+
+  # show stash diff for all stashes
+  stash-diff-all = !"git stash list | awk -F: '{print $1}' | xargs -I{} git stash show {} --patch"
+
+  # show current branch upstream
+  upstream = !"git rev-parse --abbrev-ref --symbolic-full-name @{u}"
+
+  # show commits since last tag
+  since-last-tag = !"git log $(git describe --tags --abbrev=0)..HEAD --oneline"
 
   # print help
   h = !"printf 'List of bindings:\\n \

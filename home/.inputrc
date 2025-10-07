@@ -1,2 +1,5 @@
 set colored-stats on
 set colored-completion-prefix on
+set mark-directories on
+set match-hidden-files off
+set print-completions-horizontally off
