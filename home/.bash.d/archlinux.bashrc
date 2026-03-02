@@ -20,17 +20,17 @@ wireguard_add()
 
 pacman_update()
 {
-    sudo pacman -Syu
+    sudo /usr/bin/pacman -Syu
 }
 
 pacman_install()
 {
-    sudo pacman -S --noconfirm "$@"
+    sudo /usr/bin/pacman -S --noconfirm "$@"
 }
 
 pacman_remove()
 {
-    sudo pacman -R --noconfirm "$@"
+    sudo /usr/bin/pacman -R --noconfirm "$@"
 }
 
 pacman_search()

@@ -29,9 +29,9 @@ __go_install()
     export GOPATH="$HOME/.go"
     export GOPROXY="direct"
     export GOSUMDB=off
-    if [[ ! "$PATH" == *${GOROOT}/bin:${GOPATH}/bin* ]]; then
-      export PATH="${PATH}:${GOROOT}/bin:${GOPATH}/bin"
-    fi
+
+    sh_path_add "${GOROOT}/bin"
+    sh_path_add "${GOPATH}/bin"
     mkdir -p "$GOPATH"
   fi
 
@@ -43,9 +43,9 @@ if bin_exists go; then
   export GOPATH="$HOME/.go"
   export GOPROXY="direct"
   export GOSUMDB=off
-  if [[ ! "$PATH" == *${GOROOT}/bin:${GOPATH}/bin* ]]; then
-    export PATH="${PATH}:${GOROOT}/bin:${GOPATH}/bin"
-  fi
+
+  sh_path_add "${GOROOT}/bin"
+  sh_path_add "${GOPATH}/bin"
   mkdir -p "$GOPATH"
 fi
 

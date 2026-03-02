@@ -134,13 +134,13 @@
   diff-interactive = !"bash $HOME/.git.d/git-interactive-diff.sh"
   di = diff-interactive
 
-  select-branch = !"git checkout \"$(bash $HOME/.git.d/git-interactive-select-branch.sh)\""
+  select-branch = !"branch=$(bash $HOME/.git.d/git-interactive-select-branch.sh) && [ -n \"$branch\" ] && git checkout \"$branch\""
   sb = select-branch
 
-  select-commit = !"git checkout \"$(bash $HOME/.git.d/git-interactive-select-commit.sh)\""
+  select-commit = !"commit=$(bash $HOME/.git.d/git-interactive-select-commit.sh) && [ -n \"$commit\" ] && git checkout \"$commit\""
   sc = select-commit
 
-  select-tag = !"git checkout \"$(bash $HOME/.git.d/git-interactive-select-tags.sh)\""
+  select-tag = !"tag=$(bash $HOME/.git.d/git-interactive-select-tags.sh) && [ -n \"$tag\" ] && git checkout \"$tag\""
   st = select-tag
 
   # check if commit1 is older than commit2

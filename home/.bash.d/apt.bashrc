@@ -96,8 +96,8 @@ alias is_git_repo="git rev-parse --is-inside-work-tree 2>&- 1>&-"
 function git_select()
 (
   local __git_log_output
-  if __git_log_output=$(git log --oneline --color=always --format='%C(auto)%H%d %s %C(black)%C(bold)%cr %Cblue[%cn]%Creset'); then
-    gum filter --placeholder 'Filter...' --indicator=">" < <(echo "$__git_log_output") | cut -d' ' -f1  | clip_copy
+  if __git_log_output=$(git log --color=always --format='%C(auto)%H%d %s %C(black)%C(bold)%cr %Cblue[%cn]%Creset'); then
+    gum filter --placeholder 'Filter...' --indicator=">" < <(echo "$__git_log_output") | sed 's/\x1b\[[0-9;]*m//g' | cut -d' ' -f1 | clip_copy
   fi
 )
 alias gitsel="git_select"
@@ -106,8 +106,8 @@ function git_diff()
 {
   git log --graph --color=always --format='%C(auto)%h%d %s %C(black)%C(bold)%cr %Cblue[%cn]%Creset' "$@" |
   fzf --ansi --no-sort --reverse --tiebreak=index --bind=ctrl-s:toggle-sort \
-      --preview "(echo {} | grep -o '[a-f0-9]\{7\}' | head -1 | xargs -I % sh -c 'git show --color=always %')" \
-      --bind "ctrl-m:execute: (grep -o '[a-f0-9]\{7\}' | head -1 | xargs -I % sh -c 'git show --color=always % | less -R') << 'FZF-EOF'
+      --preview "(echo {} | grep -o '[a-f0-9]\{7,\}' | head -1 | xargs -I % sh -c 'git show --color=always %')" \
+      --bind "ctrl-m:execute: (grep -o '[a-f0-9]\{7,\}' | head -1 | xargs -I % sh -c 'git show --color=always % | less -R') << 'FZF-EOF'
                 {}
 FZF-EOF"
 }
@@ -133,6 +133,102 @@ function git_undebug()
   export GIT_TRACE=
   export GIT_CURL_VERBOSE=
 }
+
+#
+# GitHub CLI (gh)
+#
+
+if bin_exists gh; then
+
+# list PRs: number, state, branch, title, last commit
+gh_prs()
+{
+  gh pr list --state "${1:-open}" --json number,headRefName,title,state,commits \
+    --template '{{range .}}#{{.number}} [{{.headRefName}}] {{.title}} ({{(index .commits (sub (len .commits) 1)).messageHeadline}}){{"\n"}}{{end}}'
+}
+
+# fzf-select a PR and checkout
+gh_pr_checkout()
+{
+  local pr
+  pr=$(gh pr list --json number,headRefName,title --template '{{range .}}{{.number}}\t{{.headRefName}}\t{{.title}}{{"\n"}}{{end}}' \
+    | fzf --delimiter='\t' --with-nth=1,2,3 --preview 'gh pr view {1} --comments' \
+    | cut -f1)
+  [ -n "$pr" ] && gh pr checkout "$pr"
+}
+alias ghco="gh_pr_checkout"
+
+# fzf-select a PR and view diff
+gh_pr_diff()
+{
+  local pr
+  pr=$(gh pr list --state "${1:-open}" --json number,headRefName,title --template '{{range .}}{{.number}}\t{{.headRefName}}\t{{.title}}{{"\n"}}{{end}}' \
+    | fzf --delimiter='\t' --with-nth=1,2,3 --preview 'gh pr diff {1} --color=always | head -200' \
+    | cut -f1)
+  [ -n "$pr" ] && gh pr diff "$pr" --color=always | less -R
+}
+
+# list my open PRs and issues across repos
+gh_my()
+{
+  echo "=== PRs ==="
+  gh search prs --author=@me --state=open --json repository,number,title,updatedAt \
+    --template '{{range .}}{{.repository.nameWithOwner}}#{{.number}} {{.title}} ({{timefmt "2006-01-02" .updatedAt}}){{"\n"}}{{end}}'
+  echo "=== Issues ==="
+  gh search issues --assignee=@me --state=open --json repository,number,title,updatedAt \
+    --template '{{range .}}{{.repository.nameWithOwner}}#{{.number}} {{.title}} ({{timefmt "2006-01-02" .updatedAt}}){{"\n"}}{{end}}'
+}
+
+# CI runs: fzf-select and view logs
+gh_runs()
+{
+  local run
+  run=$(gh run list --limit 20 --json databaseId,status,conclusion,name,headBranch,createdAt \
+    --template '{{range .}}{{.databaseId}}\t{{.status}}\t{{.conclusion}}\t{{.headBranch}}\t{{.name}}\t{{timefmt "01-02 15:04" .createdAt}}{{"\n"}}{{end}}' \
+    | fzf --delimiter='\t' --with-nth=2,3,4,5,6 --preview 'gh run view {1}' \
+    | cut -f1)
+  [ -n "$run" ] && gh run view "$run" --log | less -R
+}
+
+# watch current branch CI
+gh_run_watch()
+{
+  local run
+  run=$(gh run list --branch "$(git branch --show-current)" --limit 1 --json databaseId --template '{{(index . 0).databaseId}}')
+  [ -n "$run" ] && gh run watch "$run" --exit-status
+}
+
+# search code on github
+gh_search()
+{
+  _arg_assert_exists "$1" "gh_search <query> [language]" || return
+  local query="$1"
+  [ -n "$2" ] && query="$query language:$2"
+  gh search code "$query" --json repository,path,textMatches \
+    --template '{{range .}}{{.repository.nameWithOwner}}/{{.path}}{{"\n"}}{{range .textMatches}}  {{.fragment}}{{"\n"}}{{end}}{{end}}' | head -80
+}
+
+# quick PR create from current branch
+gh_pr_create()
+{
+  gh pr create --fill --web "$@"
+}
+alias ghprc="gh_pr_create"
+
+# view repo info
+gh_repo()
+{
+  gh repo view --json name,description,stargazerCount,forkCount,defaultBranchRef,languages \
+    --template '{{.name}} ⭐{{.stargazerCount}} 🍴{{.forkCount}} [{{.defaultBranchRef.name}}]{{"\n"}}{{.description}}{{"\n"}}{{range .languages.edges}}{{.node.name}} {{end}}{{"\n"}}'
+}
+
+# notifications
+gh_notif()
+{
+  gh api notifications --jq '.[] | "\(.repository.full_name) \(.subject.type): \(.subject.title)"' | head -30
+}
+
+fi
 
 #
 # VCPKG
@@ -492,8 +588,100 @@ _install_asciinema()
 }
 
 #
-# GdbInit
+# perf
 #
+
+_perf_check_dwarf_support()
+{
+  if ! bin_exists perf; then
+    echo "perf not found" >&2
+    return 1
+  fi
+
+  # Try a no-op record to test DWARF support (silently)
+  if perf record -g --call-graph dwarf true -o /dev/null 2>/dev/null; then
+    return 0
+  fi
+
+  echo "perf does not support '--call-graph dwarf' on this system" >&2
+  return 2
+}
+perf_attach()
+{
+  _arg_assert_exists "$1" "perf_attach <pid> [out.data]" || return
+  local pid="$1"
+  local tmpdir
+  tmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t perf)
+  echo "Temp dir: $tmpdir"
+  cd "$tmpdir" || return
+  local out="${2:-${tmpdir}/perf-${pid}.data}"
+
+  _perf_check_dwarf_support || return
+
+  echo "Recording perf (DWARF) on pid $pid -> $out (Ctrl-C to stop)"
+  perf record -g --call-graph dwarf -p "$pid" -o "$out"
+  echo "Recording finished: $out"
+}
+
+perf_cmd()
+{
+  _arg_assert_exists "$1" "perf_cmd <cmd> [out.data]" || return
+  local tmpdir
+  tmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t perf)
+  echo "Temp dir: $tmpdir"
+  cd "$tmpdir" || return
+  local out="${2:-${tmpdir}/perf-cmd.data}"
+
+  _perf_check_dwarf_support || return
+
+  echo "Recording command under perf (DWARF) -> $out"
+  perf record -g --call-graph dwarf -o "$out" -- "$@"
+  echo "Recording finished: $out"
+}
+
+perf_report()
+{
+  _arg_assert_exists "$1" "perf_report <perf.data>" || return
+  local data="$1"
+
+  if ! bin_exists perf; then
+    echo "perf not found" >&2
+    return 1
+  fi
+
+  echo "Opening perf report for $data"
+  perf report -g --stdio -i "$data"
+}
+
+#
+# gdb
+#
+
+gdb_bt()
+{
+  gdb -ex "set pagination off" -ex "thread apply all bt full" -ex "quit" --args "$@"
+}
+
+gdb_bt_attach()
+{
+  _arg_assert_exists "$1" "gdb_bt_attach <pid>" || return
+  local pid="$1"
+  shift
+  gdb -ex "set pagination off" -ex "thread apply all bt full" -ex "quit" --pid "$pid" "$@"
+}
+
+gdb_catch()
+{
+  gdb -ex "handle SIGHUP nostop noprint nopass" -ex "handle SIGPIPE nostop noprint nopass" -ex "catch throw" -ex "run" --args "$@"
+}
+
+gdb_catch_attach()
+{
+  _arg_assert_exists "$1" "gdb_catch_attach <pid>" || return
+  local pid="$1"
+  shift
+  gdb -ex "handle SIGHUP nostop noprint nopass" -ex "handle SIGPIPE nostop noprint nopass" -ex "catch throw" -ex "run" --pid "$pid" "$@"
+}
 
 _install_gdb_init()
 {
@@ -557,4 +745,185 @@ _install_nerdfonts()
 _install_ncdu()
 {
   __pkg_manager_install ncdu
+}
+
+#
+# qemu
+#
+
+qemu_img_create()
+{
+  _arg_assert_exists "$1" "qemu_img_create <path> <size> [backing_file]" || return
+  _arg_assert_exists "$2" "qemu_img_create <path> <size> [backing_file]" || return
+
+  local img="$1" size="$2" backing="$3"
+  if [[ -n "$backing" ]]; then
+    qemu-img create -f qcow2 -b "$backing" "$img" "$size"
+  else
+    qemu-img create -f qcow2 "$img" "$size"
+  fi
+}
+
+qemu_convert()
+{
+  _arg_assert_exists "$1" "qemu_convert <src> <dst> [format]" || return
+  _arg_assert_exists "$2" "qemu_convert <src> <dst> [format]" || return
+
+  local src="$1" dst="$2" fmt="${3:-qcow2}"
+  qemu-img convert -f auto -O "$fmt" "$src" "$dst"
+}
+
+_qemu_default_arch()
+{
+  local cur
+  cur="$(uname -m)"
+  case "$cur" in
+    x86_64) echo "x86_64" ;;
+    aarch64) echo "aarch64" ;;
+    i686|i386) echo "i386" ;;
+    *) echo "$cur" ;;
+  esac
+}
+
+qemu_start()
+{
+  _arg_assert_exists "$1" "qemu_start <image> [arch] [mem] [cpus] [ssh_port] [bg] [iso]" || return
+
+  local img="$1"
+  local arch="$2"
+  local mem="$3"
+  local cpus="$4"
+  local ssh_port="$5"
+  local bg_flag="$6"
+  local iso="$7"
+
+  # Interactive architecture selection with fzf (pre-filled with current arch)
+  if [[ -z "$arch" ]]; then
+    if bin_exists fzf; then
+      local curarch
+      curarch="$(_qemu_default_arch)"
+      arch=$(printf "%s\n" "x86_64" "aarch64" "i386" | fzf --height 6 --query "$curarch" --prompt "Choose architecture: ")
+    else
+      arch="$(_qemu_default_arch)"
+    fi
+  fi
+
+  # Interactive memory and cpu selection with gum (fallback to defaults)
+  if [[ -z "$mem" ]]; then
+    if bin_exists gum; then
+      mem=$(gum input --value "2G" --prompt "Memory (e.g. 2G):")
+    else
+      mem="2G"
+    fi
+  fi
+
+  if [[ -z "$cpus" ]]; then
+    if bin_exists gum; then
+      cpus=$(gum input --value "2" --prompt "CPUs:")
+    else
+      cpus="2"
+    fi
+  fi
+
+  # Choose qemu binary based on arch
+  local qemu_bin
+  case "$arch" in
+    x86_64) qemu_bin="qemu-system-x86_64" ;;
+    aarch64|arm64) qemu_bin="qemu-system-aarch64" ;;
+    i386|i686) qemu_bin="qemu-system-i386" ;;
+    *) qemu_bin="qemu-system-x86_64" ;;
+  esac
+
+  _arg_assert_binary "$qemu_bin" "$qemu_bin not found" || return
+
+  # Build network options with optional SSH port forwarding
+  local netdev_opts=""
+  if [[ -n "$ssh_port" ]]; then
+    netdev_opts=",hostfwd=tcp::${ssh_port}-:22"
+  fi
+
+  # Build command safely as an array
+  local drive_opts="file=${img},if=virtio,cache=none"
+  local qemu_cmd
+  qemu_cmd=("$qemu_bin" "-m" "$mem" "-smp" "$cpus" "-drive" "$drive_opts" "-device" "virtio-net-pci,netdev=net0" "-netdev" "user,id=net0${netdev_opts}" "-enable-kvm")
+
+  if [[ -n "$iso" ]]; then
+    qemu_cmd+=("-cdrom" "$iso")
+  fi
+
+  if [[ "$bg_flag" == "bg" || "$bg_flag" == "daemon" ]]; then
+    qemu_cmd+=("-daemonize" "-display" "none")
+  else
+    qemu_cmd+=("-nographic")
+  fi
+
+  echo "Starting VM: ${qemu_cmd[*]}"
+  "${qemu_cmd[@]}"
+}
+
+qemu_ssh()
+{
+  _arg_assert_exists "$1" "qemu_ssh <port> [user]" || return
+  local port="$1" user="${2:-root}"
+  ssh -o StrictHostKeyChecking=no -p "$port" "${user}@127.0.0.1"
+}
+
+qemu_mount_image()
+{
+  _arg_assert_exists "$1" "qemu_mount_image <image> [partition-num]" || return
+
+  local img="$1" partnum="${2:-1}" nbd="/dev/nbd0" mp="/mnt/qemu_img"
+  sudo modprobe nbd max_part=16
+  sudo qemu-nbd --connect="$nbd" "$img"
+  sleep 0.5
+  sudo partprobe "$nbd" || true
+
+  local devpart="${nbd}p${partnum}"
+  if [[ ! -b "$devpart" ]]; then
+    devpart="${nbd}${partnum}"
+  fi
+  if [[ ! -b "$devpart" ]]; then
+    echo "Partition ${partnum} not found on ${nbd}" >&2
+    return 2
+  fi
+  sudo mkdir -p "$mp"
+  sudo mount "$devpart" "$mp"
+  echo "Image mounted on $mp (device: $devpart)"
+}
+
+qemu_unmount_image()
+{
+  local nbd="${1:-/dev/nbd0}" mp="${2:-/mnt/qemu_img}"
+  if mountpoint -q "$mp"; then
+    sudo umount "$mp"
+    sudo rmdir --ignore-fail-on-non-empty "$mp" || true
+  fi
+  sudo qemu-nbd --disconnect "$nbd" || true
+  echo "Disconnected: $nbd"
+}
+
+qemu_snapshot_create()
+{
+  _arg_assert_exists "$1" "qemu_snapshot_create <image> <name>" || return
+  _arg_assert_exists "$2" "qemu_snapshot_create <image> <name>" || return
+  qemu-img snapshot -c "$2" "$1"
+}
+
+qemu_snapshot_list()
+{
+  _arg_assert_exists "$1" "qemu_snapshot_list <image>" || return
+  qemu-img snapshot -l "$1"
+}
+
+qemu_snapshot_delete()
+{
+  _arg_assert_exists "$1" "qemu_snapshot_delete <image> <name>" || return
+  _arg_assert_exists "$2" "qemu_snapshot_delete <image> <name>" || return
+  qemu-img snapshot -d "$2" "$1"
+}
+
+qemu_list_images()
+{
+  local dir="${1:-.}"
+  find "$dir" -maxdepth 3 -type f \( -iname '*.qcow2' -o -iname '*.img' -o -iname '*.raw' \) -print
 }

@@ -30,6 +30,11 @@ duh()
   du -h "$@" | sort -h
 }
 
+psg()
+{
+  ps aux | grep "$@" | grep -v grep
+}
+
 #
 # OS
 #
@@ -168,6 +173,149 @@ function syslog_msg() {
 function syslog_tail() {
   local __nb=${1:-10}
   tail /var/log/syslog -n ${__nb}
+}
+
+#
+# Lsof
+#
+
+# List open files by a specific user
+lsof_user()
+{
+  _arg_assert_exists "$1" "usage: lsof_user <username>" || return
+
+  lsof -u "$1"
+}
+
+# List open files for a given PID
+lsof_pid()
+{
+  _arg_assert_number "$1" "usage: lsof_pid <pid>" || return
+
+  lsof -p "$1"
+}
+
+# List open files for a given command name
+lsof_cmd()
+{
+  _arg_assert_exists "$1" "usage: lsof_cmd <command_name>" || return
+
+  lsof -c "$1"
+}
+
+# List processes listening on a specific port
+lsof_port()
+{
+  _arg_assert_number "$1" "usage: lsof_port <port>" || return
+
+  lsof -i :"$1"
+}
+
+# List all network connections (TCP + UDP)
+lsof_network()
+{
+  lsof -i -P -n
+}
+
+# List only TCP connections
+lsof_tcp()
+{
+  lsof -i TCP -P -n
+}
+
+# List only UDP connections
+lsof_udp()
+{
+  lsof -i UDP -P -n
+}
+
+# List established TCP connections
+lsof_established()
+{
+  lsof -i TCP -s TCP:ESTABLISHED -P -n
+}
+
+# List listening sockets
+lsof_listen()
+{
+  lsof -i -s TCP:LISTEN -P -n
+}
+
+# List connections to a specific host
+lsof_host()
+{
+  _arg_assert_exists "$1" "usage: lsof_host <host_or_ip>" || return
+
+  lsof -i @"$1" -P -n
+}
+
+# List connections between local and remote host:port
+lsof_host_port()
+{
+  _arg_assert_exists "$1" "usage: lsof_host_port <host_or_ip> <port>" || return
+  _arg_assert_number "$2" "usage: lsof_host_port <host_or_ip> <port>" || return
+
+  lsof -i @"$1":"$2" -P -n
+}
+
+# List IPv4 only connections
+lsof_ipv4()
+{
+  lsof -i 4 -P -n
+}
+
+# List IPv6 only connections
+lsof_ipv6()
+{
+  lsof -i 6 -P -n
+}
+
+# List open files in a specific directory (and below)
+lsof_dir()
+{
+  _arg_assert_exists "$1" "usage: lsof_dir <directory>" || return
+
+  lsof +D "$1"
+}
+
+# List who is using a specific file
+lsof_file()
+{
+  _arg_assert_file "$1" "usage: lsof_file <file>" || return
+
+  lsof "$1"
+}
+
+# List deleted but still open files (zombie files eating disk space)
+lsof_deleted()
+{
+  lsof +L1
+}
+
+# List open files on a specific filesystem / mount point
+lsof_mount()
+{
+  _arg_assert_exists "$1" "usage: lsof_mount <mount_point>" || return
+
+  lsof +f -- "$1"
+}
+
+# List open unix domain sockets
+lsof_unix()
+{
+  lsof -U
+}
+
+# Count open file descriptors per process, sorted
+lsof_fd_count()
+{
+  lsof -n 2>/dev/null | awk '{print $1}' | sort | uniq -c | sort -rn | head -n "${1:-20}"
+}
+
+# List open files for current shell's PID
+lsof_self()
+{
+  lsof -p $$
 }
 
 #
@@ -491,32 +639,22 @@ _prettify_dbus_introspection() {
   '
 }
 
-dbus_system_query()
+dbus_system_introspect()
 {
-  _arg_assert_exists "$1" "usage: dbus_system_query <service_name>" || return
+  _arg_assert_exists "$1" "usage: dbus_system_introspect <service_name>" || return
 
   local service_name=$1
   local object_path="/${1//./\/}"
   dbus_system_call "$service_name" "$object_path" "org.freedesktop.DBus.Introspectable" "Introspect" | _prettify_dbus_introspection
 }
 
-dbus_session_query()
+dbus_session_introspect()
 {
-  _arg_assert_exists "$1" "usage: dbus_session_query <service_name>" || return
+  _arg_assert_exists "$1" "usage: dbus_session_introspect <service_name>" || return
 
   local service_name=$1
   local object_path="/${1//./\/}"
   dbus_session_call "$service_name" "$object_path" "org.freedesktop.DBus.Introspectable" "Introspect" | _prettify_dbus_introspection
-}
-
-dbus_session_call()
-{
-  _dbus_call --session "$@"
-}
-
-dbus_system_call()
-{
-  _dbus_call --system "$@"
 }
 
 _dbus_call()
@@ -545,6 +683,16 @@ _dbus_call()
 
   dbus-send "$bus_type" --dest="$service_name" --type=method_call --print-reply \
     "$object_path" "$interface_name"."$method_name" "$@"
+}
+
+dbus_session_call()
+{
+  _dbus_call --session "$@"
+}
+
+dbus_system_call()
+{
+  _dbus_call --system "$@"
 }
 
 #

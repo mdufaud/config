@@ -513,3 +513,37 @@ str_trim()
   local trimmed_left=$(str_trim_left "$1")
   str_trim_right "$trimmed_left"
 }
+
+# Sh utils
+
+sh_path_find()
+{
+  _arg_assert_exists "$1" "usage: sh_path_find <command>" || return
+
+  IFS=':' read -ra SUBPATH <<< "$PATH"
+  local dir
+  for dir in "${SUBPATH[@]}"; do
+    if [ -f "$dir/$1" ]; then
+      echo "$dir/$1"
+    fi
+  done
+}
+
+sh_path_add()
+{
+  _arg_assert_exists "$1" "usage: sh_path_add <path-to-add> [<path-to-add>...]" || return
+
+  local p
+  for p in "$@"; do
+    [ -z "$p" ] && continue
+
+    if [ ! -d "$p" ]; then
+      echo "sh_path_add: '$p' is not a directory" >&2
+      continue
+    fi
+
+    if ! str_contains "$PATH" "$p"; then
+      export PATH="${PATH}:$p"
+    fi
+  done
+}

@@ -8,9 +8,8 @@ __cargo_install()
 
   if ! bin_exists cargo; then
     __pkg_manager_install cargo
-    if [[ ! "$PATH" == *$HOME/.cargo/bin* ]]; then
-      export PATH="${PATH}:$HOME/.cargo/bin"
-    fi
+
+    sh_path_add "$HOME/.cargo/bin"
   fi
 
   local projname="$1"
@@ -40,9 +39,7 @@ __cargo_install()
   cargo install --path .
 )
 
-if [[ ! "$PATH" == *$HOME/.cargo/bin* ]]; then
-  PATH="${PATH}:$HOME/.cargo/bin"
-fi
+sh_path_add "$HOME/.cargo/bin"
 
 #
 # Dog (DNS tool)
