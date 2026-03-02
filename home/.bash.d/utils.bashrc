@@ -176,25 +176,44 @@ file_contained_in()
   _arg_assert_exists "$1" "usage: file_contained_in <file-contained> <file-containing>" || return
   _arg_assert_exists "$2" "usage: file_contained_in <file-contained> <file-containing>" || return
 
-  local __res=`comm -23 <(sort $1) <(sort $2)`
-  ! var_exists res
+  local __res=$(comm -23 <(sort "$1") <(sort "$2"))
+  [ -z "$__res" ]
 }
 
 replace_all()
 {
-  _arg_assert_exists "$1" "usage: replace_all <from> <to>" || return
-  _arg_assert_exists "$2" "usage: replace_all <from> <to>" || return
+  opt_begin "replace_all [-y] [-i] <from> <to>"
+  opt_desc  "Replace all occurrences of a string in files recursively"
+  opt_flag  y yes         "Skip confirmations"
+  opt_flag  i insensitive "Case insensitive search"
+  opt_parse "$@" || return
+
+  local __from="${opt_args[0]}"
+  local __to="${opt_args[1]}"
+  _arg_assert_exists "$__from" "$opt_usage" || return
+  _arg_assert_exists "$__to" "$opt_usage" || return
+
+  local __grep_opts=""
+  [ "$opt_insensitive" = "true" ] && __grep_opts="-i"
 
   # show list of changes with colors
-  grep -R --exclude-dir=.git $1
-  ask_confirm "Replacing '$1' -> '$2'" || return
+  grep -R $__grep_opts --exclude-dir=.git "$__from"
 
-  local __list_of_files=$(grep -Rl --exclude-dir=.git $1)
+  if [ "$opt_yes" != "true" ]; then
+    ask_confirm "Replacing '$__from' -> '$__to'" || return
+  fi
 
-  echo "Will execute: sed -i 's/$1/$2/g' $__list_of_files"
-  ask_confirm "Execute ?" || return
+  local __list_of_files=$(grep -Rl $__grep_opts --exclude-dir=.git "$__from")
 
-  sed -i "s/$1/$2/g" $__list_of_files
+  local __sed_flags=""
+  [ "$opt_insensitive" = "true" ] && __sed_flags="I"
+
+  echo "Will execute: sed -i 's/$__from/$__to/g$__sed_flags' on $(echo "$__list_of_files" | wc -l) files"
+  if [ "$opt_yes" != "true" ]; then
+    ask_confirm "Execute ?" || return
+  fi
+
+  sed -i "s/$__from/$__to/g$__sed_flags" $__list_of_files
 }
 
 #
@@ -205,9 +224,10 @@ alias busy="cat /dev/urandom | hexdump -C | grep 'ca fe'"
 
 sh_cmd_most_used()
 {
-  local __count=$1
-
-  if [ -z "$__count" ]; then __count=10; fi
+  opt_begin "sh_cmd_most_used [-n count]"
+  opt_desc  "Show most used commands from bash history"
+  opt_param n count 10 "Number of commands to show"
+  opt_parse "$@" || return
 
   # list most used commands in bash
   history \
@@ -216,7 +236,7 @@ sh_cmd_most_used()
     | column -c3 -s " " -t \
     | sort -nr \
     | nl \
-    | head -n$__count
+    | head -n${opt_count}
 }
 
 #
@@ -359,24 +379,45 @@ sh_watch_until_different_timeout()
 
 extract()
 {
-  if [ -f $1 ] ; then
-    case $1 in
-          *.tar.bz2)   tar xvjf $1    ;;
-          *.tar.gz)    tar xvzf $1    ;;
-          *.bz2)       bunzip2 $1     ;;
-          *.rar)       unrar x $1     ;;
-          *.gz)        gunzip $1      ;;
-          *.tar)       tar xvf $1     ;;
-          *.tbz2)      tar xvjf $1    ;;
-          *.tgz)       tar xvzf $1    ;;
-          *.zip)       unzip $1       ;;
-          *.Z)         uncompress $1  ;;
-          *.7z)        7z x $1        ;;
-          *)           >&2 echo "don't know how to extract '$1'..." ;;
+  opt_begin "extract [-d dir] [-l] <file>"
+  opt_desc  "Extract archive files"
+  opt_param d dir  "" "Output directory"
+  opt_flag  l list    "List contents only, don't extract"
+  opt_parse "$@" || return
+
+  local __file="${opt_args[0]}"
+  _arg_assert_file "$__file" "$opt_usage" || return
+
+  if [[ "$opt_list" == "true" ]]; then
+    case "$__file" in
+      *.tar.bz2|*.tar.gz|*.tar|*.tbz2|*.tgz) tar tf "$__file" ;;
+      *.zip) unzip -l "$__file" ;;
+      *.rar) unrar l "$__file" ;;
+      *.7z)  7z l "$__file" ;;
+      *)     >&2 echo "don't know how to list '$__file'..." ;;
     esac
-  else
-    >&2 echo "'$1' is not a valid file!"
+    return
   fi
+
+  local __dest="${opt_dir:+$opt_dir/}"
+  if [[ -n "$opt_dir" ]]; then
+    mkdir -p "$opt_dir"
+  fi
+
+  case "$__file" in
+    *.tar.bz2)   tar xvjf "$__file" ${opt_dir:+-C "$opt_dir"}  ;;
+    *.tar.gz)    tar xvzf "$__file" ${opt_dir:+-C "$opt_dir"}  ;;
+    *.bz2)       bunzip2 "$__file"     ;;
+    *.rar)       unrar x "$__file" ${__dest}  ;;
+    *.gz)        gunzip "$__file"      ;;
+    *.tar)       tar xvf "$__file" ${opt_dir:+-C "$opt_dir"}   ;;
+    *.tbz2)      tar xvjf "$__file" ${opt_dir:+-C "$opt_dir"}  ;;
+    *.tgz)       tar xvzf "$__file" ${opt_dir:+-C "$opt_dir"}  ;;
+    *.zip)       unzip "$__file" ${opt_dir:+-d "$opt_dir"}     ;;
+    *.Z)         uncompress "$__file"  ;;
+    *.7z)        7z x "$__file" ${opt_dir:+-o"$opt_dir"}       ;;
+    *)           >&2 echo "don't know how to extract '$__file'..." ;;
+  esac
 }
 
 #

@@ -26,7 +26,7 @@ function is_ipv4()
 
 function is_ipv6()
 {
-  local regex='^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$'
+  local regex='^[[:space:]]*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}))|:)))(%.+)?[[:space:]]*$'
   [[ $1 =~ $regex ]]
 }
 
@@ -178,14 +178,22 @@ function tcp_client()
 )
 
 function tcp_scan() {
-  _arg_assert_exists "$1" "usage: tcp_scan <host> [port-min] [port-max]" || return
+  opt_begin "tcp_scan [-v] <host> [port-min] [port-max]"
+  opt_desc  "Scan TCP ports on a host using /dev/tcp"
+  opt_flag  v verbose "Show closed/refused ports too"
+  opt_parse "$@" || return
 
-  local __host=$1
-  local __port_min=${2:-1}
-  local __port_max=${3:-65535}
+  local __host="${opt_args[0]}"
+  local __port_min="${opt_args[1]:-1}"
+  local __port_max="${opt_args[2]:-65535}"
+  _arg_assert_exists "$__host" "$opt_usage" || return
 
-  seq $__port_min $__port_max | while read port; do \
-    echo $port 2>/dev/null >/dev/tcp/$__host/$port && echo $port open; \
+  seq $__port_min $__port_max | while read port; do
+    if echo $port 2>/dev/null >/dev/tcp/$__host/$port; then
+      echo "$port open"
+    elif [ "$opt_verbose" = "true" ]; then
+      echo "$port closed"
+    fi
   done
 
   true
@@ -289,12 +297,15 @@ alias http_headers='curl -LI -A Mozilla/5.0'
 alias http_headers_compression='curl -LI --compressed -A Mozilla/5.0'
 
 function http_get() (
-  _arg_assert_exists "$1" "usage: http_test <host>" || return
+  opt_begin "http_get [-p port] <host>"
+  opt_desc  "Send a raw HTTP GET request"
+  opt_param p port 80 "Port number"
+  opt_parse "$@" || return
 
-  local __host=$1
-  local __port=${2:-80}
+  local __host="${opt_args[0]}"
+  _arg_assert_exists "$__host" "$opt_usage" || return
 
-  exec 3<>/dev/tcp/$__host/$__port || return
+  exec 3<>/dev/tcp/$__host/$opt_port || return
 
   echo -e "GET / HTTP/1.1\r\nhost: $__host\r\nConnection: close\r\n\r\n" >&3
 
@@ -391,9 +402,14 @@ qr_code()
 
 udp_multi_srv()
 {
-  _arg_assert_exists "$1" "usage: udp_multi_srv <port>" || return
+  opt_begin "udp_multi_srv [-p proto] <port>"
+  opt_desc  "Start a Python UDP server"
+  opt_param p proto AF_INET "Protocol family (AF_INET or AF_INET6)"
+  opt_parse "$@" || return
 
-  local proto_type="${2:-AF_INET}"
+  _arg_assert_exists "${opt_args[0]}" "$opt_usage" || return
+
+  local proto_type="$opt_proto"
   local srv_path
   srv_path="$(mktemp)"
 
@@ -420,15 +436,20 @@ if __name__ == "__main__":
     start_server(port)
 EOF
 
-  python3 "${srv_path}" "$1"
+  python3 "${srv_path}" "${opt_args[0]}"
   rm -f "${srv_path}"
 }
 
 tcp_multi_srv()
 {
-  _arg_assert_exists "$1" "usage: tcp_multi_srv <port>" || return
+  opt_begin "tcp_multi_srv [-p proto] <port>"
+  opt_desc  "Start a Python TCP server"
+  opt_param p proto AF_INET "Protocol family (AF_INET or AF_INET6)"
+  opt_parse "$@" || return
 
-  local proto_type="${2:-AF_INET}"
+  _arg_assert_exists "${opt_args[0]}" "$opt_usage" || return
+
+  local proto_type="$opt_proto"
   local srv_path
   srv_path="$(mktemp)"
 
@@ -475,20 +496,29 @@ if __name__ == "__main__":
     start_server(port)
 EOF
 
-  python3 "${srv_path}" "$1"
+  python3 "${srv_path}" "${opt_args[0]}"
   rm -f "${srv_path}"
 }
 
 tls_multi_srv()
 {
-  _arg_assert_exists "$1" "usage: tls_multi_srv <port> <certfile> <keyfile>" || return
-  _arg_assert_exists "$2" "usage: tls_multi_srv <port> <certfile> <keyfile>" || return
-  _arg_assert_exists "$3" "usage: tls_multi_srv <port> <certfile> <keyfile>" || return
+  opt_begin "tls_multi_srv [-p proto] [-P port] [-c cert_file] [-k key_file]"
+  opt_desc  "Start a Python TLS server"
+  opt_param p proto AF_INET "Protocol family (AF_INET or AF_INET6)"
+  opt_param P port 443 "Port number"
+  opt_param c cert_file "" "Certificate file"
+  opt_param k key_file "" "Key file"
+  opt_parse "$@" || return
 
-  local port="${1}"
-  local cert_file="${2}"
-  local key_file="${3}"
-  local proto_type="${4:-AF_INET}"
+  local port="${opt_port}"
+  local cert_file="${opt_cert_file}"
+  local key_file="${opt_key_file}"
+  _arg_assert_exists "$port" "$opt_usage" || return
+  _arg_assert_number "$port" "$opt_usage" || return
+  _arg_assert_exists "$cert_file" "$opt_usage" || return
+  _arg_assert_exists "$key_file" "$opt_usage" || return
+
+  local proto_type="$opt_proto"
   local srv_path
   srv_path="$(mktemp)"
 

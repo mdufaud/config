@@ -39,15 +39,25 @@ function 2gif() {
   _arg_assert_binary ffmpeg "No ffmpeg found" || return
   _arg_assert_binary convert "No convert found" || return
 
-  local __fname="${1%.*}"
+  opt_begin "2gif [-r fps] [-s scale] [-f fuzz] <file>"
+  opt_desc  "Convert a video or image to GIF"
+  opt_param r fps   10  "Frame rate"
+  opt_param s scale 480 "Output height in px"
+  opt_param f fuzz  2   "Color fuzz % for dithering"
+  opt_parse "$@" || return
+
+  local __input="${opt_args[0]}"
+  _arg_assert_exists "$__input" "$opt_usage" || return
+
+  local __fname="${__input%.*}"
   if [ ! -d "/tmp/gif" ]; then mkdir "/tmp/gif"; fi
-  if [ ${1: -4} == ".mp4" ] || [ ${1: -4} == ".mov" ] || [ ${1: -4} == ".avi" ] || [ ${1: -4} == ".flv" ] || [ ${1: -4} == ".mpg" ] || [ ${1: -4} == ".webm" ]
+  if [ "${__input: -4}" == ".mp4" ] || [ "${__input: -4}" == ".mov" ] || [ "${__input: -4}" == ".avi" ] || [ "${__input: -4}" == ".flv" ] || [ "${__input: -4}" == ".mpg" ] || [ "${__input: -4}" == ".webm" ]
   then
-    ffmpeg -i "$1" -r 10 -vf 'scale=trunc(oh*a/2)*2:480' /tmp/gif/out%04d.png
-    convert -delay 1x10 "/tmp/gif/*.png" -fuzz 2% +dither -coalesce -layers OptimizeTransparency +map "$__fname.gif"
+    ffmpeg -i "$__input" -r "$opt_fps" -vf "scale=trunc(oh*a/2)*2:${opt_scale}" /tmp/gif/out%04d.png
+    convert -delay "1x${opt_fps}" "/tmp/gif/*.png" -fuzz "${opt_fuzz}%" +dither -coalesce -layers OptimizeTransparency +map "$__fname.gif"
   else
-    convert "$1" "$__fname.gif"
-    rm "$1"
+    convert "$__input" "$__fname.gif"
+    rm "$__input"
   fi
   rm -r "/tmp/gif"
 }

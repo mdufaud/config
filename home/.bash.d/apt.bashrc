@@ -33,43 +33,44 @@ export PKG_MANAGER_INSTALL_CMD=""
 
 __pkg_manager_setup()
 {
-  if [ -z "$PKG_MANAGER" ]; then
-    if bin_exists pacman; then
-      PKG_MANAGER="pacman"
-      PKG_MANAGER_INSTALL_CMD="-S --noconfirm"
-    elif bin_exists pkg; then
-      PKG_MANAGER="pkg"
-      PKG_MANAGER_INSTALL_CMD="install -y"
-    elif bin_exists apt; then
-      PKG_MANAGER="apt"
-      PKG_MANAGER_INSTALL_CMD="install -y"
-    elif bin_exists apk; then
-      PKG_MANAGER="apk"
-      PKG_MANAGER_INSTALL_CMD="add --no-cache"
-    elif bin_exists dnf; then
-      PKG_MANAGER="dnf"
-      PKG_MANAGER_INSTALL_CMD="install -y"
-    elif bin_exists brew; then
-      PKG_MANAGER="brew"
-      PKG_MANAGER_INSTALL_CMD="install"
-    else
-      print_error "No package manager found"
-      return 1
-    fi
+  if [ -n "$PKG_MANAGER" ]; then
+    return 0
   fi
 
-  local opt_sudo
-  if bin_exists sudo; then
-    opt_sudo="sudo "
+  if bin_exists pacman; then
+    PKG_MANAGER="pacman"
+    PKG_MANAGER_INSTALL_CMD="-S --noconfirm"
+  elif bin_exists pkg; then
+    PKG_MANAGER="pkg"
+    PKG_MANAGER_INSTALL_CMD="install -y"
+  elif bin_exists apt; then
+    PKG_MANAGER="apt"
+    PKG_MANAGER_INSTALL_CMD="install -y"
+  elif bin_exists apk; then
+    PKG_MANAGER="apk"
+    PKG_MANAGER_INSTALL_CMD="add --no-cache"
+  elif bin_exists dnf; then
+    PKG_MANAGER="dnf"
+    PKG_MANAGER_INSTALL_CMD="install -y"
+  elif bin_exists brew; then
+    PKG_MANAGER="brew"
+    PKG_MANAGER_INSTALL_CMD="install"
+  else
+    print_err "No package manager found"
+    return 1
   fi
-
-  PKG_MANAGER="${opt_sudo}${PKG_MANAGER}"
 }
 
 __pkg_manager_install()
 {
-  __pkg_manager_setup
-  $PKG_MANAGER $PKG_MANAGER_INSTALL_CMD $@
+  __pkg_manager_setup || return
+
+  local __sudo=""
+  if bin_exists sudo && [ "$PKG_MANAGER" != "brew" ]; then
+    __sudo="sudo"
+  fi
+
+  $__sudo $PKG_MANAGER $PKG_MANAGER_INSTALL_CMD "$@"
 }
 
 #
@@ -201,9 +202,14 @@ gh_run_watch()
 # search code on github
 gh_search()
 {
-  _arg_assert_exists "$1" "gh_search <query> [language]" || return
-  local query="$1"
-  [ -n "$2" ] && query="$query language:$2"
+  opt_begin "gh_search [-l language] <query>"
+  opt_desc  "Search code on GitHub"
+  opt_param l language "" "Programming language filter"
+  opt_parse "$@" || return
+
+  local query="${opt_args[*]}"
+  _arg_assert_exists "$query" "$opt_usage" || return
+  [ -n "$opt_language" ] && query="$query language:$opt_language"
   gh search code "$query" --json repository,path,textMatches \
     --template '{{range .}}{{.repository.nameWithOwner}}/{{.path}}{{"\n"}}{{range .textMatches}}  {{.fragment}}{{"\n"}}{{end}}{{end}}' | head -80
 }
@@ -236,9 +242,13 @@ fi
 
 vcpkg_baseline()
 (
-  _arg_assert_exists "$1" "vcpkg_baseline <libname>" || return
+  opt_begin "vcpkg_baseline [-c commit] <libname>"
+  opt_desc  "Show vcpkg baseline version for a library"
+  opt_param c commit HEAD "Git commit reference"
+  opt_parse "$@" || return
 
-  local __commit=${2:-HEAD}
+  local __libname="${opt_args[0]}"
+  _arg_assert_exists "$__libname" "$opt_usage" || return
 
   if dir_exists ".vcpkg"; then
     cd .vcpkg
@@ -248,7 +258,7 @@ vcpkg_baseline()
     return 1
   fi
 
-  git show $__commit:versions/baseline.json | egrep -A 3 -e "$1"
+  git show $opt_commit:versions/baseline.json | egrep -A 3 -e "$__libname"
 )
 
 #
@@ -286,17 +296,23 @@ rmq_list()
 rmq_purge()
 {
   _arg_assert_binary rabbitmqctl "No rabbitmqctl found" || return
+  opt_begin "rmq_purge [-y] [-a] [queue ...]"
+  opt_desc  "Purge RabbitMQ queues (specific or all)"
+  opt_flag  y yes "Skip confirmation"
+  opt_flag  a all "Purge ALL queues"
+  opt_parse "$@" || return
 
-  if [ $# -eq 0 ]
-  then
-    ask_confirm "Are you sure you want to purge all rabbitMQ ?" || return
+  if [[ "$opt_all" == "true" ]] || [[ ${#opt_args[@]} -eq 0 ]]; then
+    if [[ "$opt_yes" != "true" ]]; then
+      ask_confirm "Are you sure you want to purge all rabbitMQ ?" || return
+    fi
     sudo rabbitmqctl list_queues | tail -n +4 | awk '{print $1}' | xargs -I {} sudo rabbitmqctl purge_queue {}
   else
     local __var
-    for __var in "$@"
+    for __var in "${opt_args[@]}"
     do
       echo "Purging queue $__var"
-      sudo rabbitmqctl purge_queue $__var
+      sudo rabbitmqctl purge_queue "$__var"
     done
   fi
 }
@@ -304,17 +320,23 @@ rmq_purge()
 rmq_delete()
 {
   _arg_assert_binary rabbitmqctl "No rabbitmqctl found" || return
+  opt_begin "rmq_delete [-y] [-a] [queue ...]"
+  opt_desc  "Delete RabbitMQ queues (specific or all)"
+  opt_flag  y yes "Skip confirmation"
+  opt_flag  a all "Delete ALL queues"
+  opt_parse "$@" || return
 
-  if [ $# -eq 0 ]
-  then
-    ask_confirm "Are you sure you want to delete all rabbitMQ ?" || return
+  if [[ "$opt_all" == "true" ]] || [[ ${#opt_args[@]} -eq 0 ]]; then
+    if [[ "$opt_yes" != "true" ]]; then
+      ask_confirm "Are you sure you want to delete all rabbitMQ ?" || return
+    fi
     sudo rabbitmqctl list_queues | tail -n +4 | awk '{print $1}' | xargs -I {} sudo rabbitmqctl delete_queue {}
   else
     local __var
-    for __var in "$@"
+    for __var in "${opt_args[@]}"
     do
       echo "Deleting queue $__var"
-      sudo rabbitmqctl delete_queue $__var
+      sudo rabbitmqctl delete_queue "$__var"
     done
   fi
 }
@@ -365,35 +387,61 @@ fi
 alias valgrind_leak="valgrind --leak-check=yes"
 alias vleak="valgrind_leak"
 
-cachegrind() (
-  valgrind --tool=cachegrind $@ &
-  local pid=$!
-  trap "kill -SIGINT $pid" INT
-  wait
+cachegrind()
+{
+  opt_begin "cachegrind [-k] [-d dir] <cmd> [args...]"
+  opt_desc  "Run a command under cachegrind and annotate results"
+  opt_flag  k keep "Keep output file (don't prompt for delete)"
+  opt_param d dir  "" "Output directory (default: current dir)"
+  opt_parse "$@" || return
 
-  sleep 0.5
-  local cachegrind_file_path="cachegrind.out.$pid"
-  cg_annotate $cachegrind_file_path
+  _arg_assert_exists "${opt_args[0]}" "$opt_usage" || return
 
-  if [ -f $cachegrind_file_path ] && ask_confirm "Delete cachegrind file ?"; then
-    rm $cachegrind_file_path
-  fi
-)
+  local __dir="${opt_dir:-.}"
+  (
+    cd "$__dir" || return
+    valgrind --tool=cachegrind "${opt_args[@]}" &
+    local pid=$!
+    trap "kill -SIGINT $pid" INT
+    wait
 
-callgrind() (
-  valgrind --tool=callgrind $@ &
-  local pid=$!
-  trap "kill -SIGINT $pid" INT
-  wait
+    sleep 0.5
+    local cachegrind_file_path="cachegrind.out.$pid"
+    cg_annotate "$cachegrind_file_path"
 
-  sleep 0.5
-  local callgrind_file_path="callgrind.out.$pid"
-  callgrind_annotate --threshold=98 --context=3 $callgrind_file_path
+    if [[ "$opt_keep" != "true" ]] && [ -f "$cachegrind_file_path" ] && ask_confirm "Delete cachegrind file ?"; then
+      rm "$cachegrind_file_path"
+    fi
+  )
+}
 
-  if [ -f $callgrind_file_path ] && ask_confirm "Delete callgrind file ?"; then
-    rm $callgrind_file_path
-  fi
-)
+callgrind()
+{
+  opt_begin "callgrind [-k] [-d dir] <cmd> [args...]"
+  opt_desc  "Run a command under callgrind and annotate results"
+  opt_flag  k keep "Keep output file (don't prompt for delete)"
+  opt_param d dir  "" "Output directory (default: current dir)"
+  opt_parse "$@" || return
+
+  _arg_assert_exists "${opt_args[0]}" "$opt_usage" || return
+
+  local __dir="${opt_dir:-.}"
+  (
+    cd "$__dir" || return
+    valgrind --tool=callgrind "${opt_args[@]}" &
+    local pid=$!
+    trap "kill -SIGINT $pid" INT
+    wait
+
+    sleep 0.5
+    local callgrind_file_path="callgrind.out.$pid"
+    callgrind_annotate --threshold=98 --context=3 "$callgrind_file_path"
+
+    if [[ "$opt_keep" != "true" ]] && [ -f "$callgrind_file_path" ] && ask_confirm "Delete callgrind file ?"; then
+      rm "$callgrind_file_path"
+    fi
+  )
+}
 
 #
 # Zoxide (cd database)
@@ -608,13 +656,19 @@ _perf_check_dwarf_support()
 }
 perf_attach()
 {
-  _arg_assert_exists "$1" "perf_attach <pid> [out.data]" || return
-  local pid="$1"
+  opt_begin "perf_attach [-o outfile] <pid>"
+  opt_desc  "Attach perf to a running process"
+  opt_param o output "" "Output data file path"
+  opt_parse "$@" || return
+
+  local pid="${opt_args[0]}"
+  _arg_assert_exists "$pid" "$opt_usage" || return
+
   local tmpdir
   tmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t perf)
   echo "Temp dir: $tmpdir"
   cd "$tmpdir" || return
-  local out="${2:-${tmpdir}/perf-${pid}.data}"
+  local out="${opt_output:-${tmpdir}/perf-${pid}.data}"
 
   _perf_check_dwarf_support || return
 
@@ -625,17 +679,23 @@ perf_attach()
 
 perf_cmd()
 {
-  _arg_assert_exists "$1" "perf_cmd <cmd> [out.data]" || return
+  opt_begin "perf_cmd [-o outfile] <cmd> [args...]"
+  opt_desc  "Record a command under perf"
+  opt_param o output "" "Output data file path"
+  opt_parse "$@" || return
+
+  _arg_assert_exists "${opt_args[0]}" "$opt_usage" || return
+
   local tmpdir
   tmpdir=$(mktemp -d 2>/dev/null || mktemp -d -t perf)
   echo "Temp dir: $tmpdir"
   cd "$tmpdir" || return
-  local out="${2:-${tmpdir}/perf-cmd.data}"
+  local out="${opt_output:-${tmpdir}/perf-cmd.data}"
 
   _perf_check_dwarf_support || return
 
   echo "Recording command under perf (DWARF) -> $out"
-  perf record -g --call-graph dwarf -o "$out" -- "$@"
+  perf record -g --call-graph dwarf -o "$out" -- "${opt_args[@]}"
   echo "Recording finished: $out"
 }
 
@@ -753,12 +813,17 @@ _install_ncdu()
 
 qemu_img_create()
 {
-  _arg_assert_exists "$1" "qemu_img_create <path> <size> [backing_file]" || return
-  _arg_assert_exists "$2" "qemu_img_create <path> <size> [backing_file]" || return
+  opt_begin "qemu_img_create [-b backing] <path> <size>"
+  opt_desc  "Create a QEMU disk image"
+  opt_param b backing "" "Backing file for COW image"
+  opt_parse "$@" || return
 
-  local img="$1" size="$2" backing="$3"
-  if [[ -n "$backing" ]]; then
-    qemu-img create -f qcow2 -b "$backing" "$img" "$size"
+  local img="${opt_args[0]}" size="${opt_args[1]}"
+  _arg_assert_exists "$img" "$opt_usage" || return
+  _arg_assert_exists "$size" "$opt_usage" || return
+
+  if [[ -n "$opt_backing" ]]; then
+    qemu-img create -f qcow2 -b "$opt_backing" "$img" "$size"
   else
     qemu-img create -f qcow2 "$img" "$size"
   fi
@@ -766,11 +831,16 @@ qemu_img_create()
 
 qemu_convert()
 {
-  _arg_assert_exists "$1" "qemu_convert <src> <dst> [format]" || return
-  _arg_assert_exists "$2" "qemu_convert <src> <dst> [format]" || return
+  opt_begin "qemu_convert [-f format] <src> <dst>"
+  opt_desc  "Convert a QEMU disk image to another format"
+  opt_param f format qcow2 "Output format"
+  opt_parse "$@" || return
 
-  local src="$1" dst="$2" fmt="${3:-qcow2}"
-  qemu-img convert -f auto -O "$fmt" "$src" "$dst"
+  local src="${opt_args[0]}" dst="${opt_args[1]}"
+  _arg_assert_exists "$src" "$opt_usage" || return
+  _arg_assert_exists "$dst" "$opt_usage" || return
+
+  qemu-img convert -f auto -O "$opt_format" "$src" "$dst"
 }
 
 _qemu_default_arch()
@@ -787,15 +857,22 @@ _qemu_default_arch()
 
 qemu_start()
 {
-  _arg_assert_exists "$1" "qemu_start <image> [arch] [mem] [cpus] [ssh_port] [bg] [iso]" || return
+  opt_begin "qemu_start [-a arch] [-m mem] [-c cpus] [-p ssh_port] [-b] [-i iso] <image>"
+  opt_desc  "Start a QEMU virtual machine"
+  opt_param a arch   "" "Architecture (x86_64, aarch64, i386)"
+  opt_param m mem    "" "Memory (e.g. 2G)"
+  opt_param c cpus   "" "CPU count"
+  opt_param p port   "" "SSH port forward to guest:22"
+  opt_flag  b bg        "Run daemonized in background"
+  opt_param i iso    "" "CD-ROM ISO path"
+  opt_parse "$@" || return
 
-  local img="$1"
-  local arch="$2"
-  local mem="$3"
-  local cpus="$4"
-  local ssh_port="$5"
-  local bg_flag="$6"
-  local iso="$7"
+  local img="${opt_args[0]}"
+  _arg_assert_exists "$img" "$opt_usage" || return
+
+  local arch="$opt_arch"
+  local mem="$opt_mem"
+  local cpus="$opt_cpus"
 
   # Interactive architecture selection with fzf (pre-filled with current arch)
   if [[ -z "$arch" ]]; then
@@ -838,8 +915,8 @@ qemu_start()
 
   # Build network options with optional SSH port forwarding
   local netdev_opts=""
-  if [[ -n "$ssh_port" ]]; then
-    netdev_opts=",hostfwd=tcp::${ssh_port}-:22"
+  if [[ -n "$opt_port" ]]; then
+    netdev_opts=",hostfwd=tcp::${opt_port}-:22"
   fi
 
   # Build command safely as an array
@@ -847,11 +924,11 @@ qemu_start()
   local qemu_cmd
   qemu_cmd=("$qemu_bin" "-m" "$mem" "-smp" "$cpus" "-drive" "$drive_opts" "-device" "virtio-net-pci,netdev=net0" "-netdev" "user,id=net0${netdev_opts}" "-enable-kvm")
 
-  if [[ -n "$iso" ]]; then
-    qemu_cmd+=("-cdrom" "$iso")
+  if [[ -n "$opt_iso" ]]; then
+    qemu_cmd+=("-cdrom" "$opt_iso")
   fi
 
-  if [[ "$bg_flag" == "bg" || "$bg_flag" == "daemon" ]]; then
+  if [[ "$opt_bg" == "true" ]]; then
     qemu_cmd+=("-daemonize" "-display" "none")
   else
     qemu_cmd+=("-nographic")
@@ -863,16 +940,29 @@ qemu_start()
 
 qemu_ssh()
 {
-  _arg_assert_exists "$1" "qemu_ssh <port> [user]" || return
-  local port="$1" user="${2:-root}"
-  ssh -o StrictHostKeyChecking=no -p "$port" "${user}@127.0.0.1"
+  opt_begin "qemu_ssh [-u user] <port>"
+  opt_desc  "SSH into a QEMU VM via forwarded port"
+  opt_param u user root "SSH user"
+  opt_parse "$@" || return
+
+  local port="${opt_args[0]}"
+  _arg_assert_exists "$port" "$opt_usage" || return
+  ssh -o StrictHostKeyChecking=no -p "$port" "${opt_user}@127.0.0.1"
 }
 
 qemu_mount_image()
 {
-  _arg_assert_exists "$1" "qemu_mount_image <image> [partition-num]" || return
+  opt_begin "qemu_mount_image [-p partnum] [-m mountpoint] [-n nbd] <image>"
+  opt_desc  "Mount a QEMU disk image via NBD"
+  opt_param p partition  1              "Partition number"
+  opt_param m mountpoint /mnt/qemu_img  "Mount path"
+  opt_param n nbd        /dev/nbd0      "NBD device"
+  opt_parse "$@" || return
 
-  local img="$1" partnum="${2:-1}" nbd="/dev/nbd0" mp="/mnt/qemu_img"
+  local img="${opt_args[0]}"
+  _arg_assert_exists "$img" "$opt_usage" || return
+
+  local nbd="$opt_nbd" mp="$opt_mountpoint" partnum="$opt_partition"
   sudo modprobe nbd max_part=16
   sudo qemu-nbd --connect="$nbd" "$img"
   sleep 0.5
@@ -893,33 +983,50 @@ qemu_mount_image()
 
 qemu_unmount_image()
 {
-  local nbd="${1:-/dev/nbd0}" mp="${2:-/mnt/qemu_img}"
-  if mountpoint -q "$mp"; then
-    sudo umount "$mp"
-    sudo rmdir --ignore-fail-on-non-empty "$mp" || true
+  opt_begin "qemu_unmount_image [-n nbd] [-m mountpoint]"
+  opt_desc  "Unmount a QEMU disk image"
+  opt_param n nbd        /dev/nbd0      "NBD device"
+  opt_param m mountpoint /mnt/qemu_img  "Mount path"
+  opt_parse "$@" || return
+
+  if mountpoint -q "$opt_mountpoint"; then
+    sudo umount "$opt_mountpoint"
+    sudo rmdir --ignore-fail-on-non-empty "$opt_mountpoint" || true
   fi
-  sudo qemu-nbd --disconnect "$nbd" || true
-  echo "Disconnected: $nbd"
+  sudo qemu-nbd --disconnect "$opt_nbd" || true
+  echo "Disconnected: $opt_nbd"
 }
 
 qemu_snapshot_create()
 {
-  _arg_assert_exists "$1" "qemu_snapshot_create <image> <name>" || return
-  _arg_assert_exists "$2" "qemu_snapshot_create <image> <name>" || return
-  qemu-img snapshot -c "$2" "$1"
+  opt_begin "qemu_snapshot_create <image> <name>"
+  opt_desc  "Create a snapshot of a QEMU disk image"
+  opt_parse "$@" || return
+
+  _arg_assert_exists "${opt_args[0]}" "$opt_usage" || return
+  _arg_assert_exists "${opt_args[1]}" "$opt_usage" || return
+  qemu-img snapshot -c "${opt_args[1]}" "${opt_args[0]}"
 }
 
 qemu_snapshot_list()
 {
-  _arg_assert_exists "$1" "qemu_snapshot_list <image>" || return
-  qemu-img snapshot -l "$1"
+  opt_begin "qemu_snapshot_list <image>"
+  opt_desc  "List snapshots of a QEMU disk image"
+  opt_parse "$@" || return
+
+  _arg_assert_exists "${opt_args[0]}" "$opt_usage" || return
+  qemu-img snapshot -l "${opt_args[0]}"
 }
 
 qemu_snapshot_delete()
 {
-  _arg_assert_exists "$1" "qemu_snapshot_delete <image> <name>" || return
-  _arg_assert_exists "$2" "qemu_snapshot_delete <image> <name>" || return
-  qemu-img snapshot -d "$2" "$1"
+  opt_begin "qemu_snapshot_delete <image> <name>"
+  opt_desc  "Delete a snapshot of a QEMU disk image"
+  opt_parse "$@" || return
+
+  _arg_assert_exists "${opt_args[0]}" "$opt_usage" || return
+  _arg_assert_exists "${opt_args[1]}" "$opt_usage" || return
+  qemu-img snapshot -d "${opt_args[1]}" "${opt_args[0]}"
 }
 
 qemu_list_images()

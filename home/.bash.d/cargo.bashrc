@@ -21,19 +21,22 @@ __cargo_install()
   fi
 
   local tag_name="$3"
+  local clone_branch_opt=""
   if [ -n "$tag_name" ]; then
-    tag_name="--branch $tag_name"
+    clone_branch_opt="--branch $tag_name"
   fi
 
   if [ ! -d $APT_DIR/$projname ]; then
-    git clone --depth 1 $tag_name $github_url $APT_DIR/$projname
+    git clone --depth 1 $clone_branch_opt $github_url $APT_DIR/$projname
     cd $APT_DIR/$projname
   else
     cd $APT_DIR/$projname
-    if [ -n "$tagname" ]; then
-      git checkout $tag_name
+    if [ -n "$tag_name" ]; then
+      git fetch
+      git checkout "$tag_name"
+    else
+      git pull
     fi
-    git pull
   fi
 
   cargo install --path .

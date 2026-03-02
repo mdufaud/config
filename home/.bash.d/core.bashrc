@@ -169,6 +169,141 @@ _arg_assert_binary()
 }
 
 #
+# Option parsing
+#
+# Declarative argument parser with automatic -h help.
+# Sets opt_* variables as locals in the caller scope (cascade-safe).
+#
+# Usage:
+#   my_func() {
+#     opt_begin "my_func [-v] [-n count] <file>"
+#     opt_desc  "Process a file with options"
+#     opt_flag  v verbose   "Enable verbose output"
+#     opt_param n count 10  "Number of items"
+#     opt_parse "$@" || return
+#
+#     # Variables set by opt_parse (local to the caller):
+#     #   opt_verbose  - "true" or "false"
+#     #   opt_count    - value or "10" (default)
+#     #   opt_args     - array of remaining positional arguments
+#     #   opt_usage    - the usage string (for later error messages)
+#
+#     local file="${opt_args[0]}"
+#     _arg_assert_exists "$file" "$opt_usage" || return
+#   }
+#
+# Cascading / nesting:
+#   opt_parse is an alias that expands to:
+#     eval "$__opt_locals"; _opt_parse
+#   The eval declares all opt_* variables as local in the CALLER's scope
+#   before _opt_parse writes to them.  This means nested calls are safe:
+#   each function gets its own locals, and the outer function's values
+#   are preserved after the inner one returns.
+#
+# Returns 0 on success (caller continues).
+# Returns 1 on -h / error (caller does || return).
+
+opt_begin()
+{
+  __opt_shorts=()
+  __opt_longs=()
+  __opt_types=()
+  __opt_descs=()
+  __opt_defaults=()
+  __opt_desc_str=""
+  _opt_usage_str="$1"
+  __opt_locals="local opt_usage opt_args"
+}
+
+opt_desc() { __opt_desc_str="$1"; }
+
+opt_flag()
+{
+  __opt_shorts+=("$1")
+  __opt_longs+=("$2")
+  __opt_types+=(b)
+  __opt_defaults+=(false)
+  __opt_descs+=("$3")
+  __opt_locals+=" opt_$2"
+}
+
+opt_param()
+{
+  __opt_shorts+=("$1")
+  __opt_longs+=("$2")
+  __opt_types+=(p)
+  __opt_defaults+=("$3")
+  __opt_descs+=("$4")
+  __opt_locals+=" opt_$2"
+}
+
+alias opt_parse='eval "$__opt_locals"; _opt_parse'
+
+_opt_parse()
+{
+  local __i __n=${#__opt_shorts[@]}
+
+  # build getopts string
+  local __gs=":"
+  for (( __i=0; __i<__n; __i++ )); do
+    __gs+="${__opt_shorts[$__i]}"
+    [[ "${__opt_types[$__i]}" == p ]] && __gs+=":"
+  done
+  __gs+="h"
+
+  # set defaults directly
+  for (( __i=0; __i<__n; __i++ )); do
+    printf -v "opt_${__opt_longs[$__i]}" '%s' "${__opt_defaults[$__i]}"
+  done
+  opt_usage="$_opt_usage_str"
+
+  # parse
+  local OPTIND=1 __o
+  while getopts "$__gs" __o "$@"; do
+    case "$__o" in
+      h)
+        # build help on demand
+        local __h="Usage: ${_opt_usage_str}"
+        [[ -n "$__opt_desc_str" ]] && __h+=$'\n'"  ${__opt_desc_str}"$'\n'
+        __h+=$'\n'"Options:"
+        local __ln
+        for (( __i=0; __i<__n; __i++ )); do
+          if [[ "${__opt_types[$__i]}" == b ]]; then
+            printf -v __ln "  -%-10s %s" "${__opt_shorts[$__i]}" "${__opt_descs[$__i]}"
+          else
+            printf -v __ln "  -%s %-8s %s" "${__opt_shorts[$__i]}" "<${__opt_longs[$__i]}>" "${__opt_descs[$__i]}"
+            [[ -n "${__opt_defaults[$__i]}" ]] && __ln+=" (default: ${__opt_defaults[$__i]})"
+          fi
+          __h+=$'\n'"$__ln"
+        done
+        __h+=$'\n'"  -h          Show this help"
+        echo "$__h"
+        return 1
+        ;;
+      \?) print_err "Unknown option: -${OPTARG}"; return 1 ;;
+      :)  print_err "Option -${OPTARG} requires a value"; return 1 ;;
+      *)
+        for (( __i=0; __i<__n; __i++ )); do
+          if [[ "${__opt_shorts[$__i]}" == "$__o" ]]; then
+            if [[ "${__opt_types[$__i]}" == b ]]; then
+              printf -v "opt_${__opt_longs[$__i]}" '%s' "true"
+            else
+              printf -v "opt_${__opt_longs[$__i]}" '%s' "$OPTARG"
+            fi
+            break
+          fi
+        done
+        ;;
+    esac
+  done
+  shift $((OPTIND-1))
+
+  # remaining positional args
+  opt_args=("$@")
+  return 0
+}
+
+#
 # Variables
 #
 

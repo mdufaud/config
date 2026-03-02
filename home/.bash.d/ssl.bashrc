@@ -115,28 +115,37 @@ ssl_cms_info()
 
 ssl_cms_sign()
 {
-  local infile="$1"
-  local outfile="$2"
-  local untrusted_signer_chain="$3"
-  local trusted_signer_chain="$4"
-  local untrusted_key="$5"
+  opt_begin "ssl_cms_sign -i <infile> -o <outfile> -s <signer> -c <certfile> -k <key>"
+  opt_desc  "CMS sign a file"
+  opt_param i infile   "" "Input file to sign"
+  opt_param o outfile  "" "Output signed file"
+  opt_param s signer   "" "Untrusted signer cert chain"
+  opt_param c certfile "" "Trusted signer cert chain"
+  opt_param k key      "" "Signer private key"
+  opt_parse "$@" || return
+
+  _arg_assert_exists "$opt_infile"   "$opt_usage" || return
+  _arg_assert_exists "$opt_outfile"  "$opt_usage" || return
+  _arg_assert_exists "$opt_signer"   "$opt_usage" || return
+  _arg_assert_exists "$opt_certfile" "$opt_usage" || return
+  _arg_assert_exists "$opt_key"      "$opt_usage" || return
 
   openssl cms -sign -binary \
-    -signer "$untrusted_signer_chain" \
-    -certfile "$trusted_signer_chain" \
-    -inkey "$untrusted_key" \
+    -signer "$opt_signer" \
+    -certfile "$opt_certfile" \
+    -inkey "$opt_key" \
     -md sha256 \
     -outform der \
     -noattr \
-    -in "$infile" \
-    -out "$outfile"
+    -in "$opt_infile" \
+    -out "$opt_outfile"
 }
 
 # pkcs7 public key
 
 ssl_p7_info()
 {
-  openssl pkcs7 -in -print_certs -in $@
+  openssl pkcs7 -print_certs -in $@
 }
 
 # pkcs8 private key
@@ -175,23 +184,23 @@ ssl_p12_export_ca()
 
 ssl_p12_gen()
 {
-  _arg_assert_exists "$1" "usage: ssl_p12_gen <private> <certificate> [+certificate (like root and intermediate)]..."
-  _arg_assert_exists "$2" "usage: ssl_p12_gen <private> <certificate> [+certificate (like root and intermediate)]..."
+  opt_begin "ssl_p12_gen -k <key> -c <cert> [extra-cert ...]"
+  opt_desc  "Generate a PKCS#12 from a key, cert, and optional extra certs (root/intermediate)"
+  opt_param k key  "" "Private key file"
+  opt_param c cert "" "Leaf certificate file"
+  opt_parse "$@" || return
 
-  #use leaf certificate
+  _arg_assert_exists "$opt_key"  "$opt_usage" || return
+  _arg_assert_exists "$opt_cert" "$opt_usage" || return
 
-  local private="$1"
-  local crt="$2"
-  shift 2
-
-  #add root and intermediate crt
-
+  # Add root and intermediate certs from positional args
   local args=""
-  for certfile in $@; do
+  local certfile
+  for certfile in "${opt_args[@]}"; do
     args="$args -certfile $certfile"
   done
 
-  openssl pkcs12 -export -inkey "$private" -in "$crt" $args
+  openssl pkcs12 -export -inkey "$opt_key" -in "$opt_cert" $args
 }
 
 # csr (certificate signing request)
@@ -203,18 +212,21 @@ ssl_csr_info()
 
 ssl_csr_sign()
 {
-  _arg_assert_exists "$1" "usage: ssl_csr_sign <certificate_output> <csr> <private> <public> [date(=3650)]"
-  _arg_assert_exists "$2" "usage: ssl_csr_sign <certificate_output> <csr> <private> <public> [date(=3650)]"
-  _arg_assert_exists "$3" "usage: ssl_csr_sign <certificate_output> <csr> <private> <public> [date(=3650)]"
-  _arg_assert_exists "$4" "usage: ssl_csr_sign <certificate_output> <csr> <private> <public> [date(=3650)]"
+  opt_begin "ssl_csr_sign -o <output> -r <csr> -k <key> -c <cert> [-d days]"
+  opt_desc  "Sign a CSR with a CA certificate"
+  opt_param o output "" "Output certificate path"
+  opt_param r csr    "" "CSR file path"
+  opt_param k key    "" "CA private key"
+  opt_param c cert   "" "CA certificate"
+  opt_param d days   3650 "Validity in days"
+  opt_parse "$@" || return
 
-  local output="$1"
-  local csr="$2"
-  local private="$3"
-  local cert="$4"
-  local days="${5:-3650}"
+  _arg_assert_exists "$opt_output" "$opt_usage" || return
+  _arg_assert_exists "$opt_csr"    "$opt_usage" || return
+  _arg_assert_exists "$opt_key"    "$opt_usage" || return
+  _arg_assert_exists "$opt_cert"   "$opt_usage" || return
 
-  openssl x509 -req -days "$days" -in "$csr" -CA "$cert" -CAkey "$private" -set_serial "0x$(openssl rand -hex 8)" -out "$output"
+  openssl x509 -req -days "$opt_days" -in "$opt_csr" -CA "$opt_cert" -CAkey "$opt_key" -set_serial "0x$(openssl rand -hex 8)" -out "$opt_output"
 }
 
 ssl_csr_verify()
@@ -224,18 +236,22 @@ ssl_csr_verify()
 
 ssl_csr_gen()
 {
-  _arg_assert_exists "$1" "usage: ssl_gen_csr <output> <private> [common-name] [date(=3650)]"
-  _arg_assert_exists "$2" "usage: ssl_gen_csr <output> <private> [common-name] [date(=3650)]"
+  opt_begin "ssl_csr_gen -o <output> -k <key> [-n common-name]"
+  opt_desc  "Generate a Certificate Signing Request"
+  opt_param o output "" "CSR output path"
+  opt_param k key    "" "Private key path"
+  opt_param n cn     "" "Common Name"
+  opt_parse "$@" || return
 
-  local csr="$1"
-  local private="$2"
-  local cn="$3"
+  _arg_assert_exists "$opt_output" "$opt_usage" || return
+  _arg_assert_exists "$opt_key"    "$opt_usage" || return
 
-  if [ -n "$cn" ]; then
-    cn="-subj /CN=$cn"
+  local __cn_opt=""
+  if [ -n "$opt_cn" ]; then
+    __cn_opt="-subj /CN=$opt_cn"
   fi
 
-  openssl req -new -key "$private" -out "$csr" $cn
+  openssl req -new -key "$opt_key" -out "$opt_output" $__cn_opt
 }
 
 # asn1
@@ -287,44 +303,54 @@ ssl_get_public_from_private()
 
 ssl_gen_cert()
 {
-  _arg_assert_exists "$1" "usage: ssl_gen_cert <output> <private> [common-name] [date(=3650)]"
-  _arg_assert_exists "$2" "usage: ssl_gen_cert <output> <private> [common-name] [date(=3650)]"
+  opt_begin "ssl_gen_cert -o <output> -k <key> [-n common-name] [-d days]"
+  opt_desc  "Generate a self-signed certificate"
+  opt_param o output "" "Output certificate path"
+  opt_param k key    "" "Private key path"
+  opt_param n cn     "" "Common Name"
+  opt_param d days   3650 "Validity in days"
+  opt_parse "$@" || return
 
-  local output="$1"
-  local private="$2"
-  local cn="$3"
-  local days="${4:-3650}"
+  _arg_assert_exists "$opt_output" "$opt_usage" || return
+  _arg_assert_exists "$opt_key"    "$opt_usage" || return
 
-  if [ -n "$cn" ]; then
-    cn="-subj /CN=$cn"
+  local __cn_opt=""
+  if [ -n "$opt_cn" ]; then
+    __cn_opt="-subj /CN=$opt_cn"
   fi
 
   # nodes omit passphrase
-  openssl req -x509 -new -nodes -key "$private" -sha256 -days "$days" -out "$output" -set_serial "0x$(openssl rand -hex 8)" $cn
+  openssl req -x509 -new -nodes -key "$opt_key" -sha256 -days "$opt_days" -out "$opt_output" -set_serial "0x$(openssl rand -hex 8)" $__cn_opt
 }
 
 ssl_gen_new()
 {
-  _arg_assert_exists "$1" "usage: ssl_gen_new <key_name> [common-name] [date(=3650)]"
+  opt_begin "ssl_gen_new [-n common-name] [-d days] <key_name>"
+  opt_desc  "Generate a new key pair + self-signed certificate"
+  opt_param n cn   "" "Common Name"
+  opt_param d days 3650 "Validity in days"
+  opt_parse "$@" || return
 
-  local name="$1"
-  local cn="$2"
-  local days="${3:-3650}"
+  local name="${opt_args[0]}"
+  _arg_assert_exists "$name" "$opt_usage" || return
 
   ssl_gen_private "${name}.key" \
     && ssl_get_public_from_private "${name}.key" > "${name}.pub" \
-    && ssl_gen_cert "${name}.crt" "${name}.key" "$cn" "$days"
+    && ssl_gen_cert -o "${name}.crt" -k "${name}.key" ${opt_cn:+-n "$opt_cn"} -d "$opt_days"
 }
 
 ssl_revoke()
 {
-  _arg_assert_exists "$1" "usage: ssl_revoke <to_revoke> <private> <certificate>"
-  _arg_assert_exists "$2" "usage: ssl_revoke <to_revoke> <private> <certificate>"
-  _arg_assert_exists "$3" "usage: ssl_revoke <to_revoke> <private> <certificate>"
+  opt_begin "ssl_revoke -r <cert-to-revoke> -k <ca-key> -c <ca-cert>"
+  opt_desc  "Revoke a certificate"
+  opt_param r revoke "" "Certificate to revoke"
+  opt_param k key    "" "CA private key"
+  opt_param c cert   "" "CA certificate"
+  opt_parse "$@" || return
 
-  local torevoke="$1"
-  local private="$2"
-  local cert="$3"
+  _arg_assert_exists "$opt_revoke" "$opt_usage" || return
+  _arg_assert_exists "$opt_key"    "$opt_usage" || return
+  _arg_assert_exists "$opt_cert"   "$opt_usage" || return
 
-  openssl ca -revoke "$torevoke" -keyfile "$private" -cert "$cert"
+  openssl ca -revoke "$opt_revoke" -keyfile "$opt_key" -cert "$opt_cert"
 }

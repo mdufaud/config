@@ -160,14 +160,19 @@ alias mountp="mount_pretty"
 #
 
 function syslog_msg() {
-  _arg_assert_exists "$1" "usage: syslog_notice {debug,info,notice,warning,err,...} msg..." || return
-  _arg_assert_exists "$2" "usage: syslog_notice {debug,info,notice,warning,err,...} msg..." || return
+  opt_begin "syslog_msg [-f facility] [-t tag] <priority> <msg...>"
+  opt_desc  "Send a message to syslog"
+  opt_param f facility local0 "Syslog facility"
+  opt_param t tag      BASH   "Syslog tag"
+  opt_parse "$@" || return
 
-  local __facility="local0"
-  local __priority=$1
-  shift
+  local __priority="${opt_args[0]}"
+  _arg_assert_exists "$__priority" "$opt_usage" || return
 
-  logger -p "$__facility.$__priority" -t "BASH" "$@"
+  local __msg="${opt_args[*]:1}"
+  _arg_assert_exists "$__msg" "$opt_usage" || return
+
+  logger -p "$opt_facility.$__priority" -t "$opt_tag" "$__msg"
 }
 
 function syslog_tail() {
@@ -355,20 +360,13 @@ _strace_pid_or_cmd()
 
 strace_signal()
 {
-  _arg_assert_exists "$1" "usage: strace_signal [signal-name --] {pid,cmd} " || return
+  opt_begin "strace_signal [-s signal] <pid|cmd> [args...]"
+  opt_desc  "Trace signals delivered to a process"
+  opt_param s signal all "Signal name to filter"
+  opt_parse "$@" || return
 
-  local __signame=$1
-  local __lines=$2
-
-  if [ "$__lines" == "--" ]; then
-    _arg_assert_exists "$3" "usage: strace_signal [signal-name --] {pid,cmd} " || return
-    shift
-    shift
-  else
-    __signame=all
-  fi
-                      # trace /    signal   / status / fds  / path / CMD or PID
-  _strace_pid_or_cmd   '!all'   "$__signame"  'all'   'all'  'all'   "$@"
+  _arg_assert_exists "${opt_args[0]}" "$opt_usage" || return
+  _strace_pid_or_cmd '!all' "$opt_signal" 'all' 'all' 'all' "${opt_args[@]}"
 }
 
 strace_syscall()
