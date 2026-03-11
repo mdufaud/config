@@ -222,3 +222,10 @@ if [ -r $HOME/.private.bashrc ]; then
 fi
 
 export PATH
+
+# Load user completion scripts
+if [ -d ~/.bash_completion.d ]; then
+    for f in ~/.bash_completion.d/*; do
+        [ -r "$f" ] && source "$f"
+    done
+fi
