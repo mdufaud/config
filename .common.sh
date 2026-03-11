@@ -32,6 +32,7 @@ list_targets()
   echo "[home/.LS_COLORS]=$HOME/.LS_COLORS"
   echo "[home/.inputrc]=$HOME/.inputrc"
   echo "[home/.bash.d]=$HOME/.bash.d"
+  echo "[home/.bash_completion.d]=$HOME/.bash_completion.d"
   echo "[apt/.config/lf]=$HOME/.config/lf"
   echo "[apt/.gitalias]=$HOME/.gitalias"
   echo "[apt/.git.d]=$HOME/.git.d"
