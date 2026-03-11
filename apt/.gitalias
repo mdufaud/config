@@ -118,6 +118,10 @@
   dl = !"git show | if [ -x \"$(command -v bat)\" ]; then bat -l patch; else cat; fi;"
   diff-last = dl
 
+  # diff last N commits (aggregate)
+  diff-before = !"f() { n=${1:-1}; git diff \"HEAD~$n\"..HEAD | if [ -x \"$(command -v bat)\" ]; then bat -l patch; else cat; fi; } ; f"
+  db = diff-before
+
   # diff tool
   dv = difftool -t vimdiff -y
   diff-view = dv
