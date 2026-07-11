@@ -16,5 +16,5 @@ case "$1" in
     # *.7z) 7z l "$1";;
     # *.pdf) pdftotext "$1" -;;
     # *) /usr/bin/batcat --color always --wrap auto --terminal-width "${__ratio}" $@ ;;
-    *) /usr/bin/batcat --color always --wrap auto $@ ;;
+    *) /usr/bin/bat --color always --wrap auto $@ ;;
 esac

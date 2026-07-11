@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #
 # Core
 #
@@ -9,6 +11,13 @@ function bash_reload()
 }
 alias sh_reload='bash_reload'
 alias shreload='bash_reload'
+
+function history_reload()
+{
+  history -a
+  history -c
+  history -r
+}
 
 function bash_export()
 {

@@ -107,7 +107,7 @@ endif
 " Only xterm can grab the mouse events when using the shift key, for other
 " terminals use ":", select text and press Esc.
 if has('mouse')
-  if &term =~ 'xterm'
+  if &term =~ 'xterm\|rxvt\|screen\|tmux\|alacritty\|kitty\|st'
     set mouse=a
   else
     set mouse=nvi
@@ -129,7 +129,11 @@ set ttimeout		" time out for key codes
 set ttimeoutlen=100	" wait up to 100ms after Esc for special key
 
 " Show @@@ in the last line if it is truncated.
-set display=truncate
+if has('patch-7.4.2073')
+  set display=truncate
+else
+  set display+=lastline
+endif
 
 " Show a few lines of context around the cursor.  Note that this makes the
 " text scroll if you mouse-click near the start or end of the window.
@@ -154,7 +158,6 @@ endif
 "
 
 set hlsearch                " highlight searches
-let c_comment_strings=1     " highlight strings inside C comments
 set cursorline              " highlight current selected line
 
 " Convenient command to see the difference between the current buffer and the
@@ -199,7 +202,7 @@ filetype plugin indent on
 set tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 " Turn off expandtab only for makefile
 autocmd FileType make setlocal noexpandtab
-autocmd FileType python set tabstop=4|set shiftwidth=4|set expandtab
+autocmd FileType python setlocal tabstop=4 shiftwidth=4 expandtab
 
 "
 " Gui
@@ -208,7 +211,6 @@ autocmd FileType python set tabstop=4|set shiftwidth=4|set expandtab
 set guioptions-=T " Removes top toolbar
 set guioptions-=r " Removes right hand scroll bar
 set go-=L " Removes left hand scroll bar
-autocmd User Rails let b:surround_{char2nr('-')} = "<% \r %>" " displays <% %> correctly
 set cpoptions+=$ " puts a $ marker for the end of words/lines in cw/c$ commands
 hi MatchParen cterm=underline ctermbg=none ctermfg=none
 if has("multi_byte")
@@ -229,18 +231,23 @@ set guicursor+=n-v-c:blinkon1
 set guicursor+=i:blinkwait10
 
 
-" Cursor
-
-if &term =~ "xterm\\|rxvt"
-  " Set red block cursor in normal mode (on startup and after leaving insert)
-  autocmd VimEnter * silent !echo -ne "\e]12;red\a\e[1 q"
-  autocmd InsertLeave * silent !echo -ne "\e]12;red\a\e[1 q"
-
-  " Set orange bar cursor in insert mode
-  autocmd InsertEnter * silent !echo -ne "\e]12;orange\a\e[6 q"
-
-  " Reset to default white block cursor on VimLeave
-  autocmd VimLeave * silent !echo -ne "\e]12;white\a\e[0 q"
+" Cursor shape and color — no shell roundtrip, works in tmux/WSL/Termux
+if !has('gui_running')
+  if $TMUX != ''
+    " Inside tmux: wrap OSC sequences with DCS passthrough
+    let &t_SI = "\ePtmux;\e\e]12;orange\a\e\\\ePtmux;\e\e[6 q\e\\"
+    let &t_EI = "\ePtmux;\e\e]12;red\a\e\\\ePtmux;\e\e[1 q\e\\"
+    let &t_SR = "\ePtmux;\e\e]12;red\a\e\\\ePtmux;\e\e[4 q\e\\"
+    let &t_ti .= "\ePtmux;\e\e]12;red\a\e\\\ePtmux;\e\e[1 q\e\\"
+    let &t_te .= "\ePtmux;\e\e]12;white\a\e\\\ePtmux;\e\e[0 q\e\\"
+  elseif &term =~ 'xterm\|rxvt\|alacritty\|kitty\|vte'
+    " xterm-compatible terminals (xterm-256color, alacritty, kitty, etc.)
+    let &t_SI = "\e]12;orange\a\e[6 q"
+    let &t_EI = "\e]12;red\a\e[1 q"
+    let &t_SR = "\e]12;red\a\e[4 q"
+    let &t_ti .= "\e]12;red\a\e[1 q"
+    let &t_te .= "\e]12;white\a\e[0 q"
+  endif
 endif
 
 "
@@ -255,16 +262,16 @@ endif
 "
 
 " Copy pasta
-map <F7> "+y
-map <S-F7> "+d
+nnoremap <F7> "+y
+nnoremap <S-F7> "+d
 map <F5> :set paste<CR>
 map <S-F5> :set nopaste<CR>
 
 " Tabs in
-vmap <Tab> >>
+xnoremap <Tab> >>
 nnoremap <Tab> >>
 " Tabs out
-vmap <S-Tab> <<
+xnoremap <S-Tab> <<
 nnoremap <S-Tab> <<
 inoremap <S-Tab> <C-d>
 
@@ -318,7 +325,7 @@ if &rtp =~ 'lightline.vim'
           \   'left': [['mode', 'paste'],['readonly', 'filename', 'modified']]
           \ },
     \ } 
-    if !has('gui_running')
+    if !has('gui_running') && &t_Co >= 256
         set t_Co=256
     endif
 endif

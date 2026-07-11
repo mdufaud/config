@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #
 # Utils
 #
@@ -25,6 +27,13 @@ function hist_execute()
 function session_type()
 {
   loginctl show-session "$(loginctl | grep "$(id -un)" | awk '{print $1}')" -p Type
+}
+
+function hyperlink()
+{
+  local url="$1"
+  local text="${2:-$1}"
+  printf '\033]8;;%s\033\\%s\033]8;;\033\\\n' "$url" "$text"
 }
 
 clip_copy()

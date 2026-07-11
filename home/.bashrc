@@ -64,16 +64,16 @@ shopt -s checkwinsize
 #
 
 # Expand the history size
-export HISTFILESIZE=10000
-export HISTSIZE=500
+export HISTFILESIZE=20000
+export HISTSIZE=2000
 
-# Sane for multibash
+# Append to the history file, don't overwrite it
 shopt -s histappend
 # Combine multiline commands into one in history
 shopt -s cmdhist
 
 # Ignore duplicates, ls without options and builtin commands
-HISTCONTROL=ignoredups
+HISTCONTROL=ignoredups:erasedups
 export HISTIGNORE="&:ls:[bf]g:exit"
 
 # Allow ctrl-S for history navigation (with ctrl-R)
@@ -97,7 +97,7 @@ bind "set show-all-if-ambiguous on"
 bind "set menu-complete-display-prefix on"
 
 # Disable the bell
-bind "set bell-style visible"
+bind 'set bell-style none'
 
 #
 # Aliases
@@ -202,6 +202,7 @@ if [ -d $HOME/.bash.d ]; then
   }
 
   load_script core
+  load_script git
   load_script utils
   load_script prompt
   load_script system

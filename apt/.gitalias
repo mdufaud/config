@@ -16,7 +16,14 @@
   rbH = rebase -i HEAD~
 
   # get master/main branch name
-  main-branch = !"git branch -l main master --format '%(refname:short)' | head -n 1"
+  branch-main = !"git branch -l main master --format '%(refname:short)' | head -n 1"
+
+  # prune all local branch from origin
+  branch-clean = "remote prune origin"
+
+  # rename branch
+  branch-rename = branch -m
+  branch-rename-origin = !"f() { git branch -m $1 $2 && git push origin -m $2 && git push origin --delete $1; } ; f"
 
   # describe alias
   type = !"f() { git config --list | grep alias | grep $1; } ; f"
@@ -36,22 +43,13 @@
 
   pull-stash = !"git stash && git pull && git stash pop"
   pullst = pull-stash
-  pull-main = !"git co $(git main-branch) && git pull && git co -" 
+  pull-main = !"git co $(git branch-main) && git pull && git co -" 
   pullm = pull-main
-
-  # list files not used by this git
-  others = "ls-files --others --ignored --exclude-from=.gitignore"
-  # count lines
-  count-lines = !"git ls-files -z | xargs -0 wc -l"
 
   # removes last commit - ready to commit again
   uncommit = "reset --soft HEAD~1"
   # removes last commit - need to add again before commit
   undo = "reset HEAD~1"
-
-  # rename branch
-  rename = branch -m
-  rename-origin = !"f() { git branch -m $1 $2 && git push origin -m $2 && git push origin --delete $1; } ; f"
 
   # checkout
   co = checkout
@@ -100,7 +98,7 @@
   diff-staged = ds
   dc = !"git d --cached"
   diff-cached = dc
-  dom = !"git d @ origin/$(git main-branch)"
+  dom = !"git d @ origin/$(git branch-main)"
 
   # diff word
   dw = !"git d --color-words"
@@ -158,8 +156,16 @@
     fi; \
   }; f"
 
+  # list files not used by this git
+  fs-others = "ls-files --others --ignored --exclude-from=.gitignore"
+  # count lines
+  fs-count-lines = !"git ls-files -z | xargs -0 wc -l"
+
   # show current repo size
-  repo-size = !"du -sh .git"
+  fs-repo-size = !"du -sh .git"
+
+  # show all tracked files sorted by size
+  fs-largest-files = !"git ls-files | xargs -I{} du -h {} | sort -nr | head -20"
 
   # show contributors sorted by number of commits
   contributors = !"git shortlog -sn --all --no-merges"
@@ -173,9 +179,6 @@
   # show all remotes and their URLs
   remotes = remote -v
 
-  # show all tracked files sorted by size
-  largest-files = !"git ls-files | xargs -I{} du -h {} | sort -nr | head -20"
-
   # show all TODOs in tracked files
   todos = !"git grep -n TODO | cat"
 
@@ -187,6 +190,9 @@
 
   # show commits since last tag
   since-last-tag = !"git log $(git describe --tags --abbrev=0)..HEAD --oneline"
+
+  # removes all commit from main branch to enable a full squash
+  squash-all = !"git reset --soft $(git merge-base HEAD origin/$(git branch-main))"
 
   # print help
   h = !"printf 'List of bindings:\\n \
