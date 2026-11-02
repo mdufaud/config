@@ -20,11 +20,32 @@ alias sys_hardware="sudo lshw"
 
 alias sys_gpu="lspci"
 
-is_pid_alive()
+pid_alive()
 {
-  _arg_assert_number "$1" "usage: is_pid_alive <pid>" || return
+  _arg_assert_number "$1" "usage: pid_alive <pid>" || return
 
   ps -p $1 >/dev/null 2>&1
+}
+
+pid_list()
+{
+  _arg_assert_exists "$1" "usage: pid_list <pid>" || return
+
+  local pid ppid start cmd parent
+
+  while IFS= read -r pid; do
+    ppid=$(ps -p "$pid" -o ppid=) || continue
+    ppid=${ppid//[[:space:]]/}
+    [[ -n $ppid ]] || continue
+
+    start=$(ps -p "$pid" -o lstart=)
+    cmd=$(ps -p "$pid" -o args=)
+    parent=$(ps -p "$ppid" -o args=)
+
+    [[ -n $cmd ]] &&
+      printf 'PID %s <- PPID %s | %s | CMD %s | PARENT %s\n' \
+        "$pid" "$ppid" "$start" "$cmd" "$parent"
+  done < <(pgrep -f "$1")
 }
 
 duh()
@@ -775,4 +796,264 @@ wpa_network_info()
   _arg_assert_exists "$1" "usage: wpa_network_info <network_path>" || return
 
   dbus_system_call fi.w1.wpa_supplicant1 "$1" org.freedesktop.DBus.Properties GetAll string:"fi.w1.wpa_supplicant1.Network"
+}
+
+#
+# Tmp cleaning
+#
+
+cache_clean_tmp()
+{
+  opt_begin "cache_clean_tmp [-n] [-H hours] [days]"
+  opt_desc "Delete own entries unused for more than <days> day(s) or <hours> hour(s) (-H wins) from a tmpfs root (default /tmp, CACHE_CLEAN_ROOT to override)"
+  opt_flag n dryrun "Dry run: only list candidates"
+  opt_param H hours "" "Max age in hours, overrides days"
+  opt_parse "$@" || return
+
+  if [ "${#opt_args[@]}" -gt 1 ]; then
+    print_err "cache_clean_tmp: too many arguments (options go before days)"
+    return 1
+  fi
+
+  local days="${opt_args[0]:-1}"
+  _arg_assert_number "$days" "usage: cache_clean_tmp [-n] [-H hours] [days=1]" || return
+  if ! [[ "$days" =~ ^[0-9]+$ ]] || [ "$days" -lt 1 ]; then
+    print_err "days must be an integer >= 1"
+    return 1
+  fi
+
+  local hours=$(( days * 24 ))
+  if [ -n "$opt_hours" ]; then
+    if ! [[ "$opt_hours" =~ ^[0-9]+$ ]] || [ "$opt_hours" -lt 1 ]; then
+      print_err "hours must be an integer >= 1"
+      return 1
+    fi
+    hours="$opt_hours"
+  fi
+
+  local root="${CACHE_CLEAN_ROOT:-/tmp}"
+  if [[ "$root" != /* ]]; then
+    print_err "CACHE_CLEAN_ROOT must be an absolute path"
+    return 1
+  fi
+  root=$(readlink -f -- "$root" 2>/dev/null)
+  if [ ! -d "$root" ] || [ "$root" = "/" ]; then
+    print_err "CACHE_CLEAN_ROOT must resolve to a directory other than /"
+    return 1
+  fi
+  if [[ "$root" == *[\*\?\[]* ]]; then
+    print_err "CACHE_CLEAN_ROOT must not contain glob characters"
+    return 1
+  fi
+  if [ "$(findmnt -no FSTYPE -T "$root" 2>/dev/null | head -n1)" != "tmpfs" ]; then
+    print_err "CACHE_CLEAN_ROOT must be on a tmpfs"
+    return 1
+  fi
+
+  local now cutoff atime_cutoff
+  now=$(date +%s)
+  cutoff=$(( now - hours * 3600 ))
+  atime_cutoff=$(( now - 2 * hours * 3600 ))
+
+  local open_list mount_list
+  open_list=$(find /proc/[0-9]*/fd /proc/[0-9]*/cwd -lname "$root/*" -printf '%l\n' 2>/dev/null)
+  mount_list=$(printf '%b' "$(findmnt -rno TARGET)")
+
+  local entry path out rc bytes n=0 freed=0
+  local candidates=() sizes=()
+
+  while IFS= read -r -d '' entry; do
+    case "${entry##*/}" in
+      .X11-unix|.ICE-unix|.font-unix|.XIM-unix|.Test-unix|.X*-lock|systemd-*|snap-private-tmp) continue ;;
+    esac
+
+    while IFS= read -r path; do
+      [[ "$path" == "$entry" || "$path" == "$entry"/* ]] && continue 2
+    done <<< "$open_list"
+
+    while IFS= read -r path; do
+      [[ "$path" == "$entry" || "$path" == "$entry"/* ]] && continue 2
+    done <<< "$mount_list"
+
+    out=$(find "$entry" \( -newermt "@$cutoff" -o -type f -newerat "@$atime_cutoff" -o -type s -o -type p \) -print -quit 2>/dev/null)
+    rc=$?
+    [ -n "$out" ] && continue
+    [ "$rc" -ne 0 ] && continue
+
+    read -r bytes _ < <(du -sb -- "$entry" 2>/dev/null)
+    [[ "$bytes" =~ ^[0-9]+$ ]] || bytes=0
+    candidates+=("$entry")
+    sizes+=("$bytes")
+    freed=$(( freed + bytes ))
+    printf '%s\t%s\n' "$(numfmt --to=iec --suffix=B "$bytes")" "$entry"
+    n=$(( n + 1 ))
+  done < <(find "$root" -mindepth 1 -maxdepth 1 -user "$(id -un)" -mmin +$(( hours * 60 )) -print0 2>/dev/null)
+
+  if [ "$opt_dryrun" == "true" ]; then
+    printf 'cache_clean_tmp (dry-run): %d candidate(s), %s\n' "$n" "$(numfmt --to=iec --suffix=B "$freed")"
+    return 0
+  fi
+
+  local i removed=0 really_freed=0
+  open_list=$(find /proc/[0-9]*/fd /proc/[0-9]*/cwd -lname "$root/*" -printf '%l\n' 2>/dev/null)
+
+  for i in "${!candidates[@]}"; do
+    entry=${candidates[$i]}
+
+    while IFS= read -r path; do
+      if [[ "$path" == "$entry" || "$path" == "$entry"/* ]]; then
+        printf 'skipped (opened): %s\n' "$entry"
+        continue 2
+      fi
+    done <<< "$open_list"
+
+    [ -L "$entry" ] || [ -e "$entry" ] || continue
+    if [ "$(stat -c %Y "$entry" 2>/dev/null || echo 0)" -ge "$cutoff" ]; then
+      printf 'skipped (active): %s\n' "$entry"
+      continue
+    fi
+
+    if rm -rf --one-file-system -- "$entry"; then
+      removed=$(( removed + 1 ))
+      really_freed=$(( really_freed + sizes[$i] ))
+    else
+      printf 'failed: %s\n' "$entry"
+    fi
+  done
+
+  printf 'cache_clean_tmp: %d/%d removed, %s freed\n' "$removed" "$n" "$(numfmt --to=iec --suffix=B "$really_freed")"
+}
+
+#
+# Tool caches cleaning
+#
+
+_cache_clean_files()
+{
+  local label="$1" dir="$2" mins="$3" dryrun="$4" priv="${5:-}" depth="${6:-}"
+  [ -d "$dir" ] || return 0
+
+  local runner=() depth_args=()
+  [ "$priv" == "sudo" ] && runner=(sudo)
+  [ -n "$depth" ] && depth_args=(-maxdepth "$depth")
+
+  local n bytes
+  read -r n bytes < <(find "$dir" "${depth_args[@]}" -type f -amin +"$mins" -mmin +"$mins" -printf '%s\n' 2>/dev/null \
+    | awk '{ n++; s += $1 } END { print n + 0, s + 0 }')
+
+  if [ "$dryrun" != "true" ] && [ "$n" -gt 0 ]; then
+    "${runner[@]}" find "$dir" "${depth_args[@]}" -type f -amin +"$mins" -mmin +"$mins" -delete 2>/dev/null
+    [ -z "$depth" ] && "${runner[@]}" find "$dir" -mindepth 1 -type d -empty -delete 2>/dev/null
+  fi
+
+  __cache_clean_total=$(( __cache_clean_total + bytes ))
+  printf '%-12s %6d file(s), %s\n' "$label" "$n" "$(numfmt --to=iec --suffix=B "$bytes")"
+}
+
+_cache_clean_units()
+{
+  local label="$1" dir="$2" mins="$3" dryrun="$4"
+  [ -d "$dir" ] || return 0
+
+  local unit bytes n=0 total=0
+  while IFS= read -r -d '' unit; do
+    [ -n "$(find "$unit" \( -mmin -"$mins" -o \( -type f -amin -"$mins" \) \) -print -quit 2>/dev/null)" ] && continue
+    read -r bytes _ < <(du -sb -- "$unit" 2>/dev/null)
+    [[ "$bytes" =~ ^[0-9]+$ ]] || bytes=0
+    [ "$dryrun" == "true" ] || rm -rf --one-file-system -- "$unit"
+    n=$(( n + 1 ))
+    total=$(( total + bytes ))
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
+
+  __cache_clean_total=$(( __cache_clean_total + total ))
+  printf '%-12s %6d dir(s),  %s\n' "$label" "$n" "$(numfmt --to=iec --suffix=B "$total")"
+}
+
+_cache_clean_cmd()
+{
+  local label="$1" dryrun="$2"
+  shift 2
+  if [ "$dryrun" == "true" ]; then
+    printf '%-12s would run: %s\n' "$label" "$*"
+  else
+    printf '%-12s %s\n' "$label" "$*"
+    "$@"
+  fi
+}
+
+cache_clean()
+{
+  opt_begin "cache_clean [-n] [-s] [days]"
+  opt_desc "Prune tool caches (ccache, npm, yarn, pip, uv, cargo, docker builder, yay, vcpkg, pacman) unused for more than <days> day(s) (default 30)"
+  opt_flag n dryrun "Dry run: only report what would be removed"
+  opt_flag s sudo "Also clean the root-owned pacman cache (uses sudo)"
+  opt_parse "$@" || return
+
+  if [ "${#opt_args[@]}" -gt 1 ]; then
+    print_err "cache_clean: too many arguments (options go before days)"
+    return 1
+  fi
+
+  local days="${opt_args[0]:-30}"
+  _arg_assert_number "$days" "usage: cache_clean [-n] [-s] [days=30]" || return
+  if ! [[ "$days" =~ ^[0-9]+$ ]] || [ "$days" -lt 1 ]; then
+    print_err "days must be an integer >= 1"
+    return 1
+  fi
+
+  local mins=$(( days * 1440 ))
+  local cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
+  local __cache_clean_total=0 dir
+
+  command -v ccache >/dev/null 2>&1 && _cache_clean_cmd ccache "$opt_dryrun" ccache --evict-older-than "${days}d"
+
+  if command -v npm >/dev/null 2>&1; then
+    dir=$(npm config get cache 2>/dev/null)
+    _cache_clean_files npm "${dir}/_cacache" "$mins" "$opt_dryrun"
+  fi
+
+  if command -v yarn >/dev/null 2>&1; then
+    dir=$(yarn cache dir 2>/dev/null | head -n1)
+    [ -n "$dir" ] && _cache_clean_units yarn "$dir" "$mins" "$opt_dryrun"
+  fi
+
+  if command -v pip >/dev/null 2>&1; then
+    dir=$(pip cache dir 2>/dev/null | head -n1)
+    [ -n "$dir" ] && _cache_clean_files pip "$dir" "$mins" "$opt_dryrun"
+  fi
+
+  command -v uv >/dev/null 2>&1 && _cache_clean_cmd uv "$opt_dryrun" uv cache prune
+
+  _cache_clean_files cargo "${CARGO_HOME:-$HOME/.cargo}/registry/cache" "$mins" "$opt_dryrun"
+
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    _cache_clean_cmd docker "$opt_dryrun" docker builder prune -f --filter "until=$(( days * 24 ))h"
+  fi
+
+  command -v yay >/dev/null 2>&1 && _cache_clean_units yay "${cache_home}/yay" "$mins" "$opt_dryrun"
+
+  local vcpkg_root="${VCPKG_ROOT:-}"
+  if [ -z "$vcpkg_root" ] && command -v vcpkg >/dev/null 2>&1; then
+    vcpkg_root=$(dirname "$(readlink -f "$(command -v vcpkg)")")
+  fi
+  if [ -d "$vcpkg_root/buildtrees" ]; then
+    _cache_clean_files vcpkg-bin "${VCPKG_DEFAULT_BINARY_CACHE:-${cache_home}/vcpkg/archives}" "$mins" "$opt_dryrun"
+    _cache_clean_files vcpkg-dl "${VCPKG_DOWNLOADS:-${vcpkg_root}/downloads}" "$mins" "$opt_dryrun" "" 1
+    _cache_clean_units vcpkg-build "${vcpkg_root}/buildtrees" "$mins" "$opt_dryrun"
+    _cache_clean_units vcpkg-pkg "${vcpkg_root}/packages" "$mins" "$opt_dryrun"
+  fi
+
+  if [ -d /var/cache/pacman/pkg ]; then
+    if [ "$opt_sudo" == "true" ] || [ "$opt_dryrun" == "true" ]; then
+      _cache_clean_files pacman /var/cache/pacman/pkg "$mins" "$opt_dryrun" sudo
+    else
+      printf '%-12s skipped (needs -s)\n' pacman
+    fi
+  fi
+
+  if [ "$opt_dryrun" == "true" ]; then
+    printf 'cache_clean (dry-run): %s measurable\n' "$(numfmt --to=iec --suffix=B "$__cache_clean_total")"
+  else
+    printf 'cache_clean: %s freed (excluding ccache/uv/docker, not measurable)\n' "$(numfmt --to=iec --suffix=B "$__cache_clean_total")"
+  fi
 }

@@ -96,6 +96,119 @@ clip_paste()
   fi
 }
 
+clip_save_image()
+{
+  if [ "$#" -gt 1 ]; then
+    print_err "usage: clip_save_image [path]"
+    return 1
+  fi
+
+  local __output="$1"
+  local __filename="${1##*/}"
+  local __directory
+  local __tmp
+  local __status
+  local __clipboard_types
+  local __mime_type
+  local __extension
+
+  if [ -n "$__output" ] && [ -d "$__output" ]; then
+    print_err "path must be a file: $__output"
+    return 1
+  fi
+
+  if is_x11; then
+    _arg_assert_binary xclip "xclip is required" || return 1
+    __clipboard_types=$(xclip -selection clipboard -target TARGETS -out) || return 1
+  elif is_wayland; then
+    _arg_assert_binary wl-paste "wl-paste is required" || return 1
+    __clipboard_types=$(wl-paste --list-types) || return 1
+  else
+    print_err "unsupported clipboard backend"
+    return 1
+  fi
+
+  case "${__filename,,}" in
+    *.png)
+      __mime_type="image/png"
+      ;;
+    *.jpg|*.jpeg)
+      __mime_type="image/jpeg"
+      ;;
+  esac
+
+  if [ -n "$__mime_type" ]; then
+    if ! grep -Fxq "$__mime_type" <<< "$__clipboard_types"; then
+      print_err "clipboard does not contain $__mime_type"
+      return 1
+    fi
+  elif grep -Fxq "image/png" <<< "$__clipboard_types"; then
+    __mime_type="image/png"
+    __extension="png"
+  elif grep -Fxq "image/jpeg" <<< "$__clipboard_types"; then
+    __mime_type="image/jpeg"
+    __extension="jpg"
+  else
+    print_err "clipboard does not contain a supported image"
+    return 1
+  fi
+
+  if [ -n "$__output" ] && [ -n "$__extension" ]; then
+    __output="$__output.$__extension"
+  fi
+
+  if [ -n "$__output" ]; then
+    if [ -d "$__output" ]; then
+      print_err "path must be a file: $__output"
+      return 1
+    fi
+
+    __directory=$(dirname -- "$__output")
+    if [ ! -d "$__directory" ]; then
+      print_err "directory does not exist: $__directory"
+      return 1
+    fi
+
+    __tmp=$(mktemp "$__directory/.clipboard-screenshot.XXXXXX") || return 1
+  else
+    __directory="${TMPDIR:-/tmp}"
+    if [ ! -d "$__directory" ]; then
+      print_err "directory does not exist: $__directory"
+      return 1
+    fi
+
+    __extension="${__mime_type#image/}"
+    [ "$__extension" = "jpeg" ] && __extension="jpg"
+    __tmp=$(mktemp "$__directory/clipboard-screenshot.XXXXXX.$__extension") || return 1
+    __output="$__tmp"
+  fi
+
+  if is_x11; then
+    xclip -selection clipboard -target "$__mime_type" -out > "$__tmp"
+  else
+    wl-paste --type "$__mime_type" > "$__tmp"
+  fi
+
+  __status=$?
+  if [ "$__status" -ne 0 ]; then
+    rm -f "$__tmp"
+    return "$__status"
+  fi
+
+  if [ ! -s "$__tmp" ]; then
+    print_err "clipboard does not contain an image"
+    rm -f "$__tmp"
+    return 1
+  fi
+
+  if [ "$__tmp" != "$__output" ] && ! mv -- "$__tmp" "$__output"; then
+    rm -f "$__tmp"
+    return 1
+  fi
+
+  printf '%s\n' "$__output"
+}
+
 explorer()
 {
   local path="${1:-.}"
@@ -171,13 +284,15 @@ alias ldiff="diff_no_common"
 findf()
 {
   _arg_assert_exists "$1" "usage: findf <search> [<path>]" || return
-  find "${2:-.}" -maxdepth 20 -type f -name "*$1*"
+  local exclude_dirs=(build node_modules .git dist sstate-cache .cache .vcpkg)
+  find "${2:-.}" -type f \( -name "${exclude_dirs[0]}" $(printf -- "-o -name %s " "${exclude_dirs[@]:1}") \) -prune -o -name "$1" -print
 }
 
 findd()
 {
   _arg_assert_exists "$1" "usage: findd <search> [<path>]" || return
-  find "${2:-.}" -maxdepth 20 -type d -name "*$1*"
+  local exclude_dirs=(build node_modules .git dist sstate-cache .cache .vcpkg)
+  find "${2:-.}" -type d \( -name "${exclude_dirs[0]}" $(printf -- "-o -name %s " "${exclude_dirs[@]:1}") \) -prune -o -name "*$1*" -print
 }
 
 file_contained_in()
@@ -584,6 +699,9 @@ sh_path_add()
   _arg_assert_exists "$1" "usage: sh_path_add <path-to-add> [<path-to-add>...]" || return
 
   local p
+  local seg
+  local new_path
+  local segs
   for p in "$@"; do
     [ -z "$p" ] && continue
 
@@ -592,8 +710,11 @@ sh_path_add()
       continue
     fi
 
-    if ! str_contains "$PATH" "$p"; then
-      export PATH="${PATH}:$p"
-    fi
+    IFS=':' read -ra segs <<< "$PATH"
+    new_path="$p"
+    for seg in "${segs[@]}"; do
+      [ "$seg" = "$p" ] || new_path="${new_path}:${seg}"
+    done
+    export PATH="$new_path"
   done
 }

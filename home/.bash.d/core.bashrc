@@ -4,6 +4,8 @@
 # Core
 #
 
+shopt -s no_empty_cmd_completion
+
 function bash_reload()
 {
   source $HOME/.bashrc

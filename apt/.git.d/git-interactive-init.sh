@@ -6,7 +6,7 @@ source "$__fzf_git"
 
 _fzf_git_fzf() {
   fzf --height=50% --tmux 90%,70% \
-    --layout=reverse --multi --min-height=20 --border \
+    --layout=reverse --min-height=20 --border \
     --border-label-pos=2 \
     --color='header:italic:underline,label:blue' \
     --preview-window='right,50%,border-left' \

@@ -5,7 +5,7 @@ source "$HOME/.git.d/git-interactive-init.sh"
 bash "$__fzf_git" --list hashes |
 _fzf_git_fzf --ansi --no-sort \
   --border-label '🍡 Hashes' \
-  --header-lines 3 \
+  --header-lines 2 \
   --tiebreak begin \
   --preview-window down,border-top,40% \
   --color hl:underline,hl+:underline \

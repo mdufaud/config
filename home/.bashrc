@@ -25,16 +25,6 @@ fi
 
 # User specific environment
 
-# set PATH so it includes user's private bin if it exists
-if [ -d "$HOME/bin" ]; then
-  PATH="$HOME/bin:$PATH"
-fi
-
-# set PATH so it includes user's private bin if it exists
-if [ -d "$HOME/.local/bin" ]; then
-  PATH="$HOME/.local/bin:$PATH"
-fi
-
 # Uncomment the following line if you don't like systemctl's auto-paging feature:
 # export SYSTEMD_PAGER=
 
@@ -108,6 +98,7 @@ alias ssh="ssh -YCC"
 alias l="ls"
 alias ll="ls -lh"
 alias la="ls -lha"
+alias lt="ls -lhtr"
 
 # show hidden files
 alias l.='ls -d .*'
@@ -204,6 +195,7 @@ if [ -d $HOME/.bash.d ]; then
   load_script core
   load_script git
   load_script utils
+  load_script json
   load_script prompt
   load_script system
   load_script network
@@ -215,11 +207,21 @@ if [ -d $HOME/.bash.d ]; then
   load_script cargo
   load_script archlinux
 
+
   unset load_script
 fi
 
 if [ -r $HOME/.private.bashrc ]; then
   . $HOME/.private.bashrc
+fi
+
+# set PATH so it includes user's private bin if it exists
+if [ -d "$HOME/bin" ]; then
+  sh_path_add "$HOME/bin"
+fi
+
+if [ -d "$HOME/.local/bin" ]; then
+  sh_path_add "$HOME/.local/bin"
 fi
 
 export PATH

@@ -4,7 +4,7 @@ export APT_DIR="$HOME/apt"
 export APT_BIN_DIR="${APT_DIR}/bin"
 export APT_LOCAL_BIN_DIR="$HOME/.local/bin"
 
-PATH="${PATH}:${APT_BIN_DIR}:${APT_LOCAL_BIN_DIR}"
+sh_path_add "$APT_BIN_DIR" "$APT_LOCAL_BIN_DIR"
 
 function install_list()
 (
@@ -453,9 +453,7 @@ _install_fzf()
   . $fzf_git_path/fzf-git.sh
 )
 
-if [[ ! "$PATH" == *${APT_DIR}/fzf/bin* ]]; then
-  PATH="${PATH}:${APT_DIR}/fzf/bin"
-fi
+sh_path_add "${APT_DIR}/fzf/bin"
 
 if bin_exists fzf; then
   eval "$(fzf --bash)"

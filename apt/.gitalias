@@ -9,27 +9,55 @@
   c = commit -m
   p = push
   cp = cherry-pick
+  url = "remote get-url origin"
 
   # rebase
   rbc = rebase --continue
   rba = rebase --abort
-  rbH = rebase -i HEAD~
+  rbs = rebase --skip
+  # fold the staged changes into a commit of this branch (picked with fzf, or given), no manual rebase
+  fixup = !"bash $HOME/.git.d/git-fixup.sh"
+  # interactive rebase of the last N commits: git rbH 3
+  rbH = !"f() { [ -n \"$1\" ] || { echo 'usage: git rbH <count>' >&2; return 1; }; git rebase -i \"HEAD~$1\"; } ; f"
+  # interactive rebase from the merge-base with main, fixup! commits auto-squashed
+  rebase-interactive = !"f() { m=$(git branch-main) || return 1; b=origin/$m; git rev-parse -q --verify \"$b\" >/dev/null || b=$m; git rebase -i --autosquash \"$(git merge-base HEAD \"$b\")\"; } ; f"
+  rbi = rebase-interactive
+  # fetch and rebase on origin's main branch
+  rebase-main = !"f() { m=$(git branch-main) || return 1; git fetch origin \"$m\" && git rebase --autostash \"origin/$m\"; } ; f"
+  rbm = rebase-main
+  # replay the commits after <old-base> onto origin's main (or <new-base>): git rebase-onto <old-base> [<new-base>]
+  rebase-onto = !"bash $HOME/.git.d/git-rebase-onto.sh"
+  rbo = rebase-onto
+  # compare commits before/after the last rebase
+  rebase-diff = !"f() { m=$(git branch-main) || return 1; git range-diff \"origin/$m\" ORIG_HEAD HEAD; } ; f"
+  rdiff = rebase-diff
+  # predict conflicts with origin's main (or <ref>), or list the unresolved ones
+  conflicts = !"bash $HOME/.git.d/git-conflicts.sh"
+  # fetch, update main, rebase on it, push with lease (-n to skip the push)
+  sync = !"bash $HOME/.git.d/git-sync.sh"
 
-  # get master/main branch name
-  branch-main = !"git branch -l main master --format '%(refname:short)' | head -n 1"
+  # get master/main branch name (origin's default branch, else local main/master)
+  branch-main = !"bash $HOME/.git.d/git-main-branch.sh"
 
-  # prune all local branch from origin
+  # drop remote-tracking refs of branches deleted on origin (local branches untouched, see branch-prune)
   branch-clean = "remote prune origin"
+
+  # local branches: age, ahead/behind main, upstream state, merged
+  branch-stale = !"bash $HOME/.git.d/git-branch-stale.sh"
+  # delete local branches whose upstream is gone or that are merged in main
+  branch-prune = !"bash $HOME/.git.d/git-branch-prune.sh"
+  # delete merged branches from origin (yours only, -a for all authors)
+  branch-prune-remote = !"bash $HOME/.git.d/git-branch-prune.sh --remote"
 
   # rename branch
   branch-rename = branch -m
-  branch-rename-origin = !"f() { git branch -m $1 $2 && git push origin -m $2 && git push origin --delete $1; } ; f"
+  branch-rename-origin = !"f() { [ $# -eq 2 ] || { echo 'usage: git branch-rename-origin <old> <new>' >&2; return 1; }; git branch -m \"$1\" \"$2\" && git push -u origin \"$2\" && git push origin --delete \"$1\"; } ; f"
 
   # describe alias
-  type = !"f() { git config --list | grep alias | grep $1; } ; f"
+  type = !"f() { git config --get-regexp \"^alias\\.$1\\$\" || git config --get-regexp \"^alias\\..*$1\"; } ; f"
 
   # clone one tag
-  clone-tag = !"f() { git clone --depth 1 --branch $2 $1 ; }; f"
+  clone-tag = !"f() { git clone --depth 1 --branch \"$2\" \"$1\" ; }; f"
 
   # clone last commit only
   clone-d1 = "clone --depth 1"
@@ -37,13 +65,15 @@
   # clone recursive submodules
   clone-rec = "clone --recurse-submodule"
 
-  # first push
-  push-first = !"git push -u origin $(git rev-parse --abbrev-ref HEAD)"
+  # push current branch and set its upstream
+  push-first = push -u origin HEAD
   pushf = push-first
 
-  pull-stash = !"git stash && git pull && git stash pop"
+  pushfwl = push --force-with-lease --force-if-includes
+
+  pull-stash = pull --autostash
   pullst = pull-stash
-  pull-main = !"git co $(git branch-main) && git pull && git co -" 
+  pull-main = !"f() { m=$(git branch-main) || return 1; if [ \"$(git branch --show-current)\" = \"$m\" ]; then git pull; else git fetch origin \"$m:$m\"; fi; } ; f"
   pullm = pull-main
 
   # removes last commit - ready to commit again
@@ -63,8 +93,8 @@
   stc = "stash store -m"
   # stash apply
   st-apply = !"f() { git stash apply stash@{${1:-0}}; } ; f"
-  # stash push / git pull / stash pop
-  stp = !"git stash ; git pull ; git stash pop"
+  # pull with autostash
+  stp = pull-stash
 
   # colored log
   log-color = log --color=always
@@ -81,39 +111,36 @@
   ls = !"f() { git log-color -${1:-10} --graph --stat | cat; } ; f"
   # print last commit details
   last = !"git log-color -1 HEAD --stat | cat"
-  # print all commits details from origin
+  # print commits not in origin's default branch, with stats
   lo = !"git log-color origin/HEAD..HEAD --stat | cat"
   list-from-origin = lo
 
   # print name of current branch
   bp = !"echo $(git rev-parse --abbrev-ref HEAD)"
-  # list branches sorted by last modified
-  b = !"git for-each-ref --sort='-authordate' --format='%(authordate)%09%(objectname)%09%(refname)' refs/heads | sed -e 's-refs/heads/--'"
+  # list branches sorted by last commit
+  b = !"git for-each-ref --sort='-committerdate' --format='%(committerdate)%09%(objectname)%09%(refname)' refs/heads | sed -e 's-refs/heads/--'"
   br = !"git branch | cat"
   bra = !"git branch -a | cat"
 
   # diff
-  d = !"f() { git diff $@ | if [ -x \"$(command -v bat)\" ]; then bat -l patch; else cat; fi; } ; f"
+  d = !"f() { git diff \"$@\" | if [ -x \"$(command -v bat)\" ]; then bat -l patch; else cat; fi; } ; f"
   ds = !"git d --staged"
   diff-staged = ds
-  dc = !"git d --cached"
-  diff-cached = dc
-  dom = !"git d @ origin/$(git branch-main)"
+  # diff of this branch since it left origin's main
+  dom = !"f() { m=$(git branch-main) || return 1; git d \"origin/$m...@\" \"$@\"; } ; f"
 
   # diff word
-  dw = !"git d --color-words"
+  dw = diff --color-words
   diff-word = dw
-  dws = !"git d --staged --color-words"
+  dws = diff --staged --color-words
   diff-word-staged = dws
-  dwc = !"git d --cached --color-words"
-  diff-word-cached = dwc
 
   # diff now
   dn = !"git d HEAD"
   diff-now = dn
 
-  # diff last commit
-  dl = !"git show | if [ -x \"$(command -v bat)\" ]; then bat -l patch; else cat; fi;"
+  # diff last commit (or given commit)
+  dl = !"f() { git show \"$@\" | if [ -x \"$(command -v bat)\" ]; then bat -l patch; else cat; fi; } ; f"
   diff-last = dl
 
   # diff last N commits (aggregate)
@@ -124,12 +151,14 @@
   dv = difftool -t vimdiff -y
   diff-view = dv
 
-  # grep
-  grep = grep -Ii
+  # ripgrep from the current directory, case-insensitive (-s for case-sensitive)
+  rg = !"cd \"${GIT_PREFIX:-.}\" && rg -i"
 
-  # skip
+  # hide local changes of a tracked file (not a .gitignore entry)
   skip = update-index --skip-worktree
   ignore = skip
+  unskip = update-index --no-skip-worktree
+  skipped = !"git ls-files -v | grep '^S'"
 
   # interactive scripts
 
@@ -147,9 +176,9 @@
 
   # check if commit1 is older than commit2
   is-older-than = !"f() { \
-    if git merge-base --is-ancestor "$1" "$2" 2>/dev/null; then \
+    if git merge-base --is-ancestor \"$1\" \"$2\" 2>/dev/null; then \
       echo 'true'; return 0; \
-    elif git merge-base --is-ancestor "$2" "$1" 2>/dev/null; then \
+    elif git merge-base --is-ancestor \"$2\" \"$1\" 2>/dev/null; then \
       echo 'false - it is more recent'; return 1; \
     else \
       echo 'none - the commits are not related'; return 2; \
@@ -158,14 +187,23 @@
 
   # list files not used by this git
   fs-others = "ls-files --others --ignored --exclude-from=.gitignore"
-  # count lines
-  fs-count-lines = !"git ls-files -z | xargs -0 wc -l"
+  # stats below are computed on the HEAD tree
+  # tracked files with the most lines, and total: git fs-count-lines [N]
+  fs-count-lines = !"bash $HOME/.git.d/git-fs-stats.sh lines"
 
   # show current repo size
-  fs-repo-size = !"du -sh .git"
+  fs-repo-size = !"bash $HOME/.git.d/git-fs-stats.sh repo"
 
-  # show all tracked files sorted by size
-  fs-largest-files = !"git ls-files | xargs -I{} du -h {} | sort -nr | head -20"
+  # largest tracked files: git fs-largest-files [N]
+  fs-largest-files = !"bash $HOME/.git.d/git-fs-stats.sh files"
+  # largest blobs in the whole history, what bloats .git: git fs-largest-blobs [N]
+  fs-largest-blobs = !"bash $HOME/.git.d/git-fs-stats.sh blobs"
+  # files, lines and size by extension: git fs-by-ext [N]
+  fs-by-ext = !"bash $HOME/.git.d/git-fs-stats.sh ext"
+  # files, lines and size by directory: git fs-by-dir [depth]
+  fs-by-dir = !"bash $HOME/.git.d/git-fs-stats.sh dir"
+  # totals + top extensions + top directories + repo size
+  fs-stats = !"bash $HOME/.git.d/git-fs-stats.sh all"
 
   # show contributors sorted by number of commits
   contributors = !"git shortlog -sn --all --no-merges"
@@ -174,7 +212,7 @@
   by-author = !"f() { git log --author=\"$1\" --oneline; } ; f"
 
   # show tags sorted by date
-  tags-by-date = !"git for-each-ref --sort=-taggerdate --format '%(refname:short) %(taggerdate)' refs/tags"
+  tags-by-date = !"git for-each-ref --sort=-creatordate --format '%(refname:short) %(creatordate)' refs/tags"
 
   # show all remotes and their URLs
   remotes = remote -v
@@ -192,7 +230,7 @@
   since-last-tag = !"git log $(git describe --tags --abbrev=0)..HEAD --oneline"
 
   # removes all commit from main branch to enable a full squash
-  squash-all = !"git reset --soft $(git merge-base HEAD origin/$(git branch-main))"
+  squash-all = !"f() { m=$(git branch-main) || return 1; b=$(git merge-base HEAD \"origin/$m\") || return 1; git reset --soft \"$b\"; } ; f"
 
   # print help
   h = !"printf 'List of bindings:\\n \
